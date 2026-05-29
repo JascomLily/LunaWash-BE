@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="LunaWash.API/LunaWash.API.csproj" />
+  <Project Path="LunaWash.Application/LunaWash.Application.csproj" />
+  <Project Path="LunaWash.Domain/LunaWash.Domain.csproj" />
+  <Project Path="LunaWash.Infrastructure/LunaWash.Infrastructure.csproj" />
+</Solution>
