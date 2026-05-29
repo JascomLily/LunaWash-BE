@@ -10,4 +10,9 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LunaWash.Application\LunaWash.Application.csproj" />
+    <ProjectReference Include="..\LunaWash.Infrastructure\LunaWash.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
