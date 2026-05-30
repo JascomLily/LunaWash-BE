@@ -39,9 +39,17 @@ namespace LunaWash.BLL.Services
             }
 
             // Verify Password
-            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, loginDto.Password);
-            if (result == PasswordVerificationResult.Failed)
+            try
             {
+                var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, loginDto.Password);
+                if (result == PasswordVerificationResult.Failed)
+                {
+                    return null;
+                }
+            }
+            catch (FormatException)
+            {
+                // The mock data contains invalid base64 hashes like "AQAAAAIAAYagAAAAEG3g1u2H..."
                 return null;
             }
 
@@ -55,6 +63,36 @@ namespace LunaWash.BLL.Services
                 Email = user.Email,
                 Role = user.Role.RoleName
             };
+        }
+
+        public async Task<bool> RegisterAsync(RegisterRequestDTO registerDto)
+        {
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == registerDto.Email);
+            if (existingUser != null)
+            {
+                return false;
+            }
+
+            var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Customer");
+            if (customerRole == null) return false;
+
+            var user = new User
+            {
+                Id = "USR-" + DateTime.UtcNow.ToString("yyMM") + "-" + Guid.NewGuid().ToString().Substring(0, 4).ToUpper(),
+                FullName = registerDto.FullName,
+                Email = registerDto.Email,
+                PhoneNumber = registerDto.Phone,
+                RoleId = customerRole.Id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            user.PasswordHash = _passwordHasher.HashPassword(user, registerDto.Password);
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         private string GenerateJwtToken(User user)

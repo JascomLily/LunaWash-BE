@@ -1,6 +1,8 @@
+using System.Security.Claims;
 using System.Threading.Tasks;
 using LunaWash.BLL.DTOs;
 using LunaWash.BLL.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LunaWash.API.Controllers
@@ -32,6 +34,49 @@ namespace LunaWash.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _authService.RegisterAsync(registerDto);
+
+            if (!result)
+            {
+                return BadRequest(new { message = "Registration failed. Email might already exist." });
+            }
+
+            return Ok(new { message = "Registration successful." });
+        }
+
+        [Authorize]
+        [HttpGet("me")]
+        public IActionResult GetCurrentUser()
+        {
+            var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var email = User.FindFirstValue("email") ?? User.FindFirstValue(ClaimTypes.Email);
+            var fullName = User.FindFirstValue(ClaimTypes.Name);
+            var role = User.FindFirstValue(ClaimTypes.Role);
+
+            return Ok(new
+            {
+                Id = userId,
+                Email = email,
+                FullName = fullName,
+                Role = role
+            });
+        }
+
+        [Authorize]
+        [HttpGet("check")]
+        public IActionResult CheckLogin()
+        {
+            return Ok(new { isAuthenticated = true });
         }
     }
 }

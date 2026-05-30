@@ -3,13 +3,15 @@ using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
 
-public partial class Role
+public partial class WashService
 {
     public string Id { get; set; } = null!;
 
-    public string RoleName { get; set; } = null!;
+    public string ServiceName { get; set; } = null!;
 
     public string? Description { get; set; }
+
+    public bool IsActive { get; set; }
 
     public DateTime CreatedAt { get; set; }
 
@@ -17,5 +19,5 @@ public partial class Role
 
     public bool IsDeleted { get; set; }
 
-    public virtual ICollection<User> Users { get; set; } = new List<User>();
+    public virtual ICollection<ServicePrice> ServicePrices { get; set; } = new List<ServicePrice>();
 }
