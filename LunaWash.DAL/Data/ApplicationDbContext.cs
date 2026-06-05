@@ -26,6 +26,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
 
+    public virtual DbSet<CustomerVehicle> CustomerVehicles { get; set; }
+
     public virtual DbSet<Invoice> Invoices { get; set; }
 
     public virtual DbSet<MembershipTier> MembershipTiers { get; set; }
@@ -218,6 +220,34 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_CustomerVouchers_Vouchers");
         });
 
+        modelBuilder.Entity<CustomerVehicle>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_CustomerVehicles");
+
+            entity.Property(e => e.Id)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.CustomerId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.VehicleTypeId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.LicensePlate).HasMaxLength(50);
+            entity.Property(e => e.VehicleModel).HasMaxLength(100);
+            entity.Property(e => e.Color).HasMaxLength(50);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerVehicles)
+                .HasForeignKey(d => d.CustomerId)
+                .HasConstraintName("FK_CustomerVehicles_Users");
+
+            entity.HasOne(d => d.VehicleType).WithMany(p => p.CustomerVehicles)
+                .HasForeignKey(d => d.VehicleTypeId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_CustomerVehicles_VehicleTypes");
+        });
+
         modelBuilder.Entity<Invoice>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__Invoices__3214EC07594F3561");
@@ -376,7 +406,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(150);
             entity.Property(e => e.FullName).HasMaxLength(150);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.PasswordHash).HasMaxLength(250);
+            entity.Property(e => e.Password).HasMaxLength(250);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.RoleId)
                 .HasMaxLength(50)

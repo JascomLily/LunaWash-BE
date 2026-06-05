@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
@@ -18,4 +18,6 @@ public partial class VehicleType
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
     public virtual ICollection<ServicePrice> ServicePrices { get; set; } = new List<ServicePrice>();
+
+    public virtual ICollection<CustomerVehicle> CustomerVehicles { get; set; } = new List<CustomerVehicle>();
 }
