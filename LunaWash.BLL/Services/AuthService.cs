@@ -38,18 +38,9 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
-            // Verify Password
-            try
+            // Verify Password (Plain text logic as requested)
+            if (user.Password != loginDto.Password)
             {
-                var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, loginDto.Password);
-                if (result == PasswordVerificationResult.Failed)
-                {
-                    return null;
-                }
-            }
-            catch (FormatException)
-            {
-                // The mock data contains invalid base64 hashes like "AQAAAAIAAYagAAAAEG3g1u2H..."
                 return null;
             }
 
@@ -88,7 +79,7 @@ namespace LunaWash.BLL.Services
                 IsDeleted = false
             };
 
-            user.PasswordHash = _passwordHasher.HashPassword(user, registerDto.Password);
+            user.Password = registerDto.Password;
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
