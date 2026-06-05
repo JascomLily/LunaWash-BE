@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
@@ -13,7 +13,7 @@ public partial class User
 
     public string PhoneNumber { get; set; } = null!;
 
-    public string PasswordHash { get; set; } = null!;
+    public string Password { get; set; } = null!;
 
     public string RoleId { get; set; } = null!;
 
@@ -34,4 +34,6 @@ public partial class User
     public virtual ICollection<PointTransaction> PointTransactions { get; set; } = new List<PointTransaction>();
 
     public virtual Role Role { get; set; } = null!;
+
+    public virtual ICollection<CustomerVehicle> CustomerVehicles { get; set; } = new List<CustomerVehicle>();
 }
