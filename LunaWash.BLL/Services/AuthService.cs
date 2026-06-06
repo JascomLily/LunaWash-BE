@@ -102,7 +102,8 @@ namespace LunaWash.BLL.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.FullName),
-                new Claim(ClaimTypes.Role, user.Role.RoleName)
+                new Claim(ClaimTypes.Role, user.Role.RoleName),
+                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? "")
             };
 
             var token = new JwtSecurityToken(

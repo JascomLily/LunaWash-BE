@@ -22,33 +22,29 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<CustomerProfile> CustomerProfiles { get; set; }
 
-    public virtual DbSet<CustomerRating> CustomerRatings { get; set; }
 
-    public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
 
     public virtual DbSet<CustomerVehicle> CustomerVehicles { get; set; }
 
-    public virtual DbSet<Invoice> Invoices { get; set; }
+
 
     public virtual DbSet<MembershipTier> MembershipTiers { get; set; }
 
-    public virtual DbSet<PointTransaction> PointTransactions { get; set; }
+
 
     public virtual DbSet<Role> Roles { get; set; }
 
-    public virtual DbSet<ServiceExecutionLog> ServiceExecutionLogs { get; set; }
+
 
     public virtual DbSet<ServicePrice> ServicePrices { get; set; }
 
-    public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
+
 
     public virtual DbSet<User> Users { get; set; }
 
     public virtual DbSet<VehicleType> VehicleTypes { get; set; }
 
-    public virtual DbSet<Voucher> Vouchers { get; set; }
 
-    public virtual DbSet<WaitQueue> WaitQueues { get; set; }
 
     public virtual DbSet<WashService> WashServices { get; set; }
 
@@ -107,27 +103,7 @@ public partial class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_Bookings_WashSlots");
 
-            entity.HasMany(d => d.ServicePrices).WithMany(p => p.Bookings)
-                .UsingEntity<Dictionary<string, object>>(
-                    "BookingService",
-                    r => r.HasOne<ServicePrice>().WithMany()
-                        .HasForeignKey("ServicePriceId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK_BookingServices_ServicePrices"),
-                    l => l.HasOne<Booking>().WithMany()
-                        .HasForeignKey("BookingId")
-                        .HasConstraintName("FK_BookingServices_Bookings"),
-                    j =>
-                    {
-                        j.HasKey("BookingId", "ServicePriceId").HasName("PK__BookingS__9D146243246C3A9E");
-                        j.ToTable("BookingServices");
-                        j.IndexerProperty<string>("BookingId")
-                            .HasMaxLength(50)
-                            .IsUnicode(false);
-                        j.IndexerProperty<string>("ServicePriceId")
-                            .HasMaxLength(50)
-                            .IsUnicode(false);
-                    });
+
         });
 
         modelBuilder.Entity<Branch>(entity =>
@@ -165,60 +141,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_CustomerProfiles_Users");
         });
 
-        modelBuilder.Entity<CustomerRating>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Customer__3214EC072EE0F36D");
 
-            entity.HasIndex(e => e.BookingId, "UQ__Customer__73951AEC0A70B41A").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.BookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.StaffComment).HasMaxLength(500);
-
-            entity.HasOne(d => d.Booking).WithOne(p => p.CustomerRating)
-                .HasForeignKey<CustomerRating>(d => d.BookingId)
-                .HasConstraintName("FK_CustomerRatings_Bookings");
-        });
-
-        modelBuilder.Entity<CustomerVoucher>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Customer__3214EC073E77F5B5");
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.CustomerId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.RedeemedDate).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.UsedAtBookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.VoucherId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-
-            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerVouchers)
-                .HasForeignKey(d => d.CustomerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CustomerVouchers_Users");
-
-            entity.HasOne(d => d.UsedAtBooking).WithMany(p => p.CustomerVouchers)
-                .HasForeignKey(d => d.UsedAtBookingId)
-                .OnDelete(DeleteBehavior.SetNull)
-                .HasConstraintName("FK_CustomerVouchers_Bookings");
-
-            entity.HasOne(d => d.Voucher).WithMany(p => p.CustomerVouchers)
-                .HasForeignKey(d => d.VoucherId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_CustomerVouchers_Vouchers");
-        });
 
         modelBuilder.Entity<CustomerVehicle>(entity =>
         {
@@ -248,33 +171,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_CustomerVehicles_VehicleTypes");
         });
 
-        modelBuilder.Entity<Invoice>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Invoices__3214EC07594F3561");
 
-            entity.HasIndex(e => e.BookingId, "UQ__Invoices__73951AECBF60DE6B").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.BookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.DiscountAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.FinalAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.OriginalAmount).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.PaymentMethod)
-                .HasMaxLength(50)
-                .HasDefaultValue("Direct");
-            entity.Property(e => e.PaymentStatus)
-                .HasMaxLength(50)
-                .HasDefaultValue("Unpaid");
-
-            entity.HasOne(d => d.Booking).WithOne(p => p.Invoice)
-                .HasForeignKey<Invoice>(d => d.BookingId)
-                .HasConstraintName("FK_Invoices_Bookings");
-        });
 
         modelBuilder.Entity<MembershipTier>(entity =>
         {
@@ -292,27 +189,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.TierName).HasMaxLength(50);
         });
 
-        modelBuilder.Entity<PointTransaction>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__PointTra__3214EC07A75B2FA3");
 
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.CustomerId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.Description).HasMaxLength(250);
-            entity.Property(e => e.TransactionType)
-                .HasMaxLength(50)
-                .HasDefaultValue("Earn");
-
-            entity.HasOne(d => d.Customer).WithMany(p => p.PointTransactions)
-                .HasForeignKey(d => d.CustomerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_PointTransactions_Users");
-        });
 
         modelBuilder.Entity<Role>(entity =>
         {
@@ -326,24 +203,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.RoleName).HasMaxLength(50);
         });
 
-        modelBuilder.Entity<ServiceExecutionLog>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__ServiceE__3214EC07F07F35EE");
 
-            entity.HasIndex(e => e.BookingId, "UQ__ServiceE__73951AECC7199CC6").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.BookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-
-            entity.HasOne(d => d.Booking).WithOne(p => p.ServiceExecutionLog)
-                .HasForeignKey<ServiceExecutionLog>(d => d.BookingId)
-                .HasConstraintName("FK_ServiceExecutionLogs_Bookings");
-        });
 
         modelBuilder.Entity<ServicePrice>(entity =>
         {
@@ -371,25 +231,7 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_ServicePrices_VehicleTypes");
         });
 
-        modelBuilder.Entity<ServiceReview>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__ServiceR__3214EC078289168E");
 
-            entity.HasIndex(e => e.BookingId, "UQ__ServiceR__73951AEC5541205F").IsUnique();
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.BookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.Comment).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-
-            entity.HasOne(d => d.Booking).WithOne(p => p.ServiceReview)
-                .HasForeignKey<ServiceReview>(d => d.BookingId)
-                .HasConstraintName("FK_ServiceReviews_Bookings");
-        });
 
         modelBuilder.Entity<User>(entity =>
         {
@@ -429,39 +271,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.TypeName).HasMaxLength(50);
         });
 
-        modelBuilder.Entity<Voucher>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__Vouchers__3214EC0773C3E668");
 
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.VoucherName).HasMaxLength(150);
-        });
-
-        modelBuilder.Entity<WaitQueue>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__WaitQueu__3214EC077C8C30C2");
-
-            entity.HasIndex(e => e.QueuePosition, "IX_WaitQueues_Position");
-
-            entity.Property(e => e.Id)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.BookingId)
-                .HasMaxLength(50)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.JoinedAt).HasDefaultValueSql("(getutcdate())");
-
-            entity.HasOne(d => d.Booking).WithMany(p => p.WaitQueues)
-                .HasForeignKey(d => d.BookingId)
-                .HasConstraintName("FK_WaitQueues_Bookings");
-        });
 
         modelBuilder.Entity<WashService>(entity =>
         {

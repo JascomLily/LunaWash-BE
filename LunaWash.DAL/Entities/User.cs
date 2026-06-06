@@ -29,9 +29,7 @@ public partial class User
 
     public virtual CustomerProfile? CustomerProfile { get; set; }
 
-    public virtual ICollection<CustomerVoucher> CustomerVouchers { get; set; } = new List<CustomerVoucher>();
 
-    public virtual ICollection<PointTransaction> PointTransactions { get; set; } = new List<PointTransaction>();
 
     public virtual Role Role { get; set; } = null!;
 

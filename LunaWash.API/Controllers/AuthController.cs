@@ -62,13 +62,15 @@ namespace LunaWash.API.Controllers
             var email = User.FindFirstValue("email") ?? User.FindFirstValue(ClaimTypes.Email);
             var fullName = User.FindFirstValue(ClaimTypes.Name);
             var role = User.FindFirstValue(ClaimTypes.Role);
+            var phone = User.FindFirstValue(ClaimTypes.MobilePhone);
 
             return Ok(new
             {
                 Id = userId,
                 Email = email,
                 FullName = fullName,
-                Role = role
+                Role = role,
+                Phone = phone
             });
         }
 
