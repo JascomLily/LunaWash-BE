@@ -7,22 +7,15 @@ namespace LunaWash.BLL.DTOs
     {
         [Required]
         public string BranchId { get; set; } = null!;
-
         [Required]
-        public string WashSlotId { get; set; } = null!;
-
+        public string VehicleTypeId { get; set; } = null!;
+        public string? VehicleBrand { get; set; }
+        public string? VehicleModel { get; set; }
+        public string? LicensePlate { get; set; }
         [Required]
-        public string ServicePackageId { get; set; } = null!; // E.g., 'SRV-WSH-01'
-
-        [Required]
-        public string VehicleId { get; set; } = null!;
-
-        [Required]
-        public string TimeSlotId { get; set; } = null!; // E.g., 'T-0900'
-
-        public bool IncludeInteriorClean { get; set; }
-
-        public string PaymentMethod { get; set; } = "tien-mat"; // tien-mat or vnpay
+        public DateTime ScheduledStartTime { get; set; }
+        public string? Notes { get; set; }
+        public List<string> ServicePriceIds { get; set; } = new List<string>();
     }
 
     public class BookingResponseDTO
