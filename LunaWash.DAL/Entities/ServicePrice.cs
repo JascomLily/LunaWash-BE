@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
@@ -26,6 +26,4 @@ public partial class ServicePrice
     public virtual WashService Service { get; set; } = null!;
 
     public virtual VehicleType VehicleType { get; set; } = null!;
-
-    public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 }
