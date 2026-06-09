@@ -21,80 +21,96 @@ namespace LunaWash.BLL.Services
 
         public async Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto)
         {
-            var vehicle = await _context.CustomerVehicles
-                .Include(v => v.VehicleType)
-                .FirstOrDefaultAsync(v => v.Id == dto.VehicleId && v.CustomerId == userId);
+            CustomerVehicle? vehicle = null;
+            if (!string.IsNullOrEmpty(dto.LicensePlate))
+            {
+                vehicle = await _context.CustomerVehicles
+                    .Include(v => v.VehicleType)
+                    .FirstOrDefaultAsync(v => v.CustomerId == userId && v.LicensePlate == dto.LicensePlate);
 
-            if (vehicle == null) return null;
+                if (vehicle == null)
+                {
+                    vehicle = new CustomerVehicle
+                    {
+                        Id = "VEH-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                        CustomerId = userId,
+                        VehicleTypeId = dto.VehicleTypeId,
+                        LicensePlate = dto.LicensePlate,
+                        VehicleModel = (dto.VehicleBrand + " " + dto.VehicleModel).Trim()
+                    };
+                    _context.CustomerVehicles.Add(vehicle);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                vehicle = await _context.CustomerVehicles
+                    .Include(v => v.VehicleType)
+                    .FirstOrDefaultAsync(v => v.CustomerId == userId && v.VehicleTypeId == dto.VehicleTypeId);
 
-            // Xử lý gói dịch vụ và giá
+                if (vehicle == null)
+                {
+                    vehicle = await _context.CustomerVehicles
+                        .Include(v => v.VehicleType)
+                        .FirstOrDefaultAsync(v => v.CustomerId == userId);
+                }
+            }
+
             string packageName = "Gói Cơ Bản";
             string services = "Rửa sạch ngoại thất, làm khô tự động và xịt bóng lốp.";
             int basePrice = 150000;
-            int durationMinutes = 15;
+            int durationMinutes = 30;
 
-            if (dto.ServicePackageId == "PK-NC")
+            if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
             {
-                packageName = "Gói Nâng Cao";
-                services = "Dịch vụ cơ bản kết hợp vệ sinh gầm và tẩy ố lazang.";
-                basePrice = 250000;
-                durationMinutes = 20;
-            }
-            else if (dto.ServicePackageId == "PK-CC")
-            {
-                packageName = "Gói Cao Cấp";
-                services = "Chăm sóc toàn diện với phủ Nano Ceramic bảo vệ sơn xe.";
-                basePrice = 500000;
-                durationMinutes = 30;
-            }
+                var servicePrices = await _context.ServicePrices
+                    .Include(sp => sp.Service)
+                    .Where(sp => dto.ServicePriceIds.Contains(sp.Id))
+                    .ToListAsync();
 
-            int interiorPrice = dto.IncludeInteriorClean ? 1000000 : 0;
-            if (dto.IncludeInteriorClean) durationMinutes += 15;
-            int totalPrice = basePrice + interiorPrice;
-
-            // Tính thời gian dựa trên TimeSlotId (VD: T-0900 -> 09:00)
-            int startHour = 8;
-            int startMinute = 0;
-            if (dto.TimeSlotId.StartsWith("T-") && dto.TimeSlotId.Length == 6)
-            {
-                int.TryParse(dto.TimeSlotId.Substring(2, 2), out startHour);
-                int.TryParse(dto.TimeSlotId.Substring(4, 2), out startMinute);
+                if (servicePrices.Any())
+                {
+                    basePrice = (int)servicePrices.Sum(sp => sp.Price);
+                    services = string.Join(", ", servicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ"));
+                    if (dto.ServicePriceIds.Any(id => id.Contains("BSC"))) packageName = "Gói Cơ Bản";
+                    else if (dto.ServicePriceIds.Any(id => id.Contains("ADV"))) packageName = "Gói Nâng Cao";
+                    else if (dto.ServicePriceIds.Any(id => id.Contains("PRE"))) packageName = "Gói Cao Cấp";
+                    else packageName = "Gói Tùy Chọn";
+                }
             }
 
-            var now = DateTime.UtcNow.AddHours(7); // Giờ VN
-            var bookingDate = now.Date;
-            // Nếu giờ đặt nhỏ hơn giờ hiện tại, chuyển sang ngày mai
-            if (startHour < now.Hour || (startHour == now.Hour && startMinute <= now.Minute))
+            string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay" : "tien-mat";
+            int totalPrice = basePrice;
+            
+            var startTime = dto.ScheduledStartTime;
+            if (startTime.Kind == DateTimeKind.Utc) 
             {
-                bookingDate = bookingDate.AddDays(1);
+                startTime = startTime.AddHours(7);
             }
-
-            var startTime = bookingDate.AddHours(startHour).AddMinutes(startMinute);
+            
             var endTime = startTime.AddMinutes(durationMinutes);
+            var bookingDate = startTime.Date;
 
-            // Lưu thông tin phụ vào Notes dưới dạng JSON để tái tạo UI dễ dàng
+            var washSlot = await _context.WashSlots.FirstOrDefaultAsync(ws => ws.BranchId == dto.BranchId);
+            string dbSlotId = washSlot?.Id ?? "BRN-BT-01-WS-01"; 
+
             var notesObj = new {
                 packageName = packageName,
                 services = services,
                 totalPrice = totalPrice,
-                extras = dto.IncludeInteriorClean ? "KÈM VỆ SINH NỘI THẤT" : null,
-                paymentMethod = dto.PaymentMethod,
+                extras = dto.Notes,
+                paymentMethod = paymentMethod,
                 timeRange = $"{startTime:HH:mm} - {endTime:HH:mm}",
-                displayDate = bookingDate == now.Date ? "Hôm nay" : (bookingDate == now.Date.AddDays(1) ? "Ngày mai" : bookingDate.ToString("dd/MM/yyyy")),
-                vehicleInfo = $"{vehicle.VehicleModel} • {vehicle.LicensePlate}"
+                displayDate = bookingDate.ToString("dd/MM/yyyy"),
+                vehicleInfo = vehicle != null ? $"{vehicle.VehicleModel} • {vehicle.LicensePlate}" : "Xe khách hàng"
             };
-
-            // Map UI IDs to valid DB IDs
-            string dbBranchId = dto.BranchId == "BR-LD" ? "BRN-BT-01" : "BRN-Q1-01";
-            string dbSlotId = dto.WashSlotId == "SL-01" ? "BRN-Q1-01-WS-01" : 
-                             (dto.WashSlotId == "SL-02" ? "BRN-Q1-01-WS-02" : "BRN-BT-01-WS-01");
 
             var booking = new Booking
             {
                 Id = "BKG-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                 CustomerId = userId,
-                BranchId = dbBranchId,
-                VehicleTypeId = vehicle.VehicleTypeId ?? "VT-OTO-01",
+                BranchId = dto.BranchId,
+                VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                 ScheduledStartTime = startTime,
                 ScheduledEndTime = endTime,
                 Status = "Confirmed",

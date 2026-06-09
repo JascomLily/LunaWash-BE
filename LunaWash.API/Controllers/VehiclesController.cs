@@ -21,7 +21,7 @@ namespace LunaWash.API.Controllers
 
         private string GetCurrentUserId()
         {
-            return User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         }
 
         [HttpGet]
