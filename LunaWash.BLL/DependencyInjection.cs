@@ -17,6 +17,8 @@ namespace LunaWash.BLL
 
             // 2. Register BLL Services
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IVehicleService, VehicleService>();
+            services.AddScoped<IBookingService, BookingService>();
 
             return services;
         }

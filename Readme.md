@@ -18,4 +18,7 @@ LunaWash là hệ thống quản lý rạp rửa xe tự động thông minh (Sm
 ## ⚙️ Hướng dẫn chạy dự án
 1. Clone repository về máy:
 ```bash
-   git clone <link-repo-be-của-nhóm>
+   git clone https://github.com/JascomLily/LunaWash-BE.git
+```
+### API
+![API](https://github.com/RoyDuong/screenshot/blob/main/screen-shots/z7880808987954_36215a20b53267ba51b40fd9f39ce26a.jpg)

@@ -6,5 +6,6 @@ namespace LunaWash.BLL.Interfaces
     public interface IAuthService
     {
         Task<LoginResponseDTO?> LoginAsync(LoginRequestDTO loginDto);
+        Task<bool> RegisterAsync(RegisterRequestDTO registerDto);
     }
 }

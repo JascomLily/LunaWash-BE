@@ -38,9 +38,8 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
-            // Verify Password
-            var result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, loginDto.Password);
-            if (result == PasswordVerificationResult.Failed)
+            // Verify Password (Plain text logic as requested)
+            if (user.Password != loginDto.Password)
             {
                 return null;
             }
@@ -55,6 +54,36 @@ namespace LunaWash.BLL.Services
                 Email = user.Email,
                 Role = user.Role.RoleName
             };
+        }
+
+        public async Task<bool> RegisterAsync(RegisterRequestDTO registerDto)
+        {
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == registerDto.Email);
+            if (existingUser != null)
+            {
+                return false;
+            }
+
+            var customerRole = await _context.Roles.FirstOrDefaultAsync(r => r.RoleName == "Customer");
+            if (customerRole == null) return false;
+
+            var user = new User
+            {
+                Id = "USR-" + DateTime.UtcNow.ToString("yyMM") + "-" + Guid.NewGuid().ToString().Substring(0, 4).ToUpper(),
+                FullName = registerDto.FullName,
+                Email = registerDto.Email,
+                PhoneNumber = registerDto.Phone,
+                RoleId = customerRole.Id,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                IsDeleted = false
+            };
+
+            user.Password = registerDto.Password;
+
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         private string GenerateJwtToken(User user)
@@ -73,7 +102,8 @@ namespace LunaWash.BLL.Services
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
                 new Claim(ClaimTypes.Name, user.FullName),
-                new Claim(ClaimTypes.Role, user.Role.RoleName)
+                new Claim(ClaimTypes.Role, user.Role.RoleName),
+                new Claim(ClaimTypes.MobilePhone, user.PhoneNumber ?? "")
             };
 
             var token = new JwtSecurityToken(
