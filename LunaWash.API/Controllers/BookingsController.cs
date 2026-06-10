@@ -31,18 +31,23 @@ namespace LunaWash.API.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var userId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(userId))
-            {
-                userId = "USR-2606-79E0"; // Fallback cho việc test qua curl không có token
-            }
+            if (string.IsNullOrEmpty(userId)) userId = "USR-2606-79E0"; 
 
-            var booking = await _bookingService.CreateBookingAsync(userId, dto);
-            if (booking == null)
+            try
             {
-                return BadRequest(new { message = "Không thể tạo lịch đặt. Vui lòng kiểm tra lại thông tin xe hoặc lịch trống." });
+                var booking = await _bookingService.CreateBookingAsync(userId, dto);
+                return Ok(booking);
             }
-
-            return Ok(booking);
+            catch (InvalidOperationException ex)
+            {
+                // Bắt lỗi Hết slot và thông báo cho người dùng
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Lỗi hệ thống
+                return StatusCode(500, new { message = "Đã xảy ra lỗi trong quá trình đặt lịch. Vui lòng thử lại sau.", details = ex.Message });
+            }
         }
 
         [HttpGet("history")]
