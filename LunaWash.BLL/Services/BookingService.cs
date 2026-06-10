@@ -131,7 +131,7 @@ namespace LunaWash.BLL.Services
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
             var bookings = await _context.Bookings
-                .Where(b => b.CustomerId == userId && !b.IsDeleted)
+                .Where(b => b.CustomerId == userId)
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
