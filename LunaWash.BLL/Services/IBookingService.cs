@@ -9,5 +9,8 @@ namespace LunaWash.BLL.Services
         Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto);
         Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId);
         Task<bool> CancelBookingAsync(string userId, string bookingId);
+
+        Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId);
+        Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus);
     }
 }

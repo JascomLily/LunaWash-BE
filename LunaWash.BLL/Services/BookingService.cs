@@ -191,6 +191,43 @@ namespace LunaWash.BLL.Services
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue)
             };
+
+            // Lấy danh sách xe cần rửa trong ngày cho nhân viên
+        public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId)
+        {
+            // Lấy thời gian hôm nay theo giờ VN
+            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+
+            var bookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId 
+                         && b.BookingDate == today 
+                         && !b.IsDeleted)
+                .OrderBy(b => b.ScheduledStartTime)
+                .ToListAsync();
+
+            return bookings.Select(BuildBookingResponse);
+        }
+
+        
+        public async Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return false;
+
+            booking.Status = newStatus;
+            booking.UpdatedAt = DateTime.UtcNow;
+
+            
+            if (newStatus == "Checked-In" && booking.CheckInTime == null)
+            {
+                booking.CheckInTime = DateTime.UtcNow.AddHours(7);
+            }
+
+            // [TƯƠNG LAI]: Nếu status là "Completed", có thể gọi logic cộng điểm (Loyalty) tại đây 
+            
+            await _context.SaveChangesAsync();
+            return true;
+        }
         }
     }
 }
