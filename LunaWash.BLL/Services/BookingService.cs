@@ -211,15 +211,98 @@ namespace LunaWash.BLL.Services
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
             if (booking == null) return false;
 
+            // Nếu đang là Completed mà lại truyền Completed tiếp thì bỏ qua (tránh cộng điểm 2 lần)
+            if (booking.Status == "Completed" && newStatus == "Completed")
+                return true;
+
             booking.Status = newStatus;
             booking.UpdatedAt = DateTime.UtcNow;
             
+            // Xử lý Check-in
             if (newStatus == "Checked-In" && booking.CheckInTime == null)
             {
                 booking.CheckInTime = DateTime.UtcNow.AddHours(7);
             }
 
-            // [TƯƠNG LAI]: Nếu status là "Completed", có thể gọi logic cộng điểm (Loyalty) tại đây 
+            // ==========================================
+            // XỬ LÝ LOYALTY: CỘNG ĐIỂM KHI HOÀN THÀNH
+            // ==========================================
+            if (newStatus == "Completed")
+            {
+                int totalPrice = 0;
+                
+                // Lấy tổng tiền từ cột Notes (Lưu JSON)
+                if (!string.IsNullOrEmpty(booking.Notes))
+                {
+                    try
+                    {
+                        using var doc = JsonDocument.Parse(booking.Notes);
+                        if (doc.RootElement.TryGetProperty("totalPrice", out var priceElement))
+                        {
+                            totalPrice = priceElement.GetInt32();
+                        }
+                    }
+                    catch { /* Bỏ qua nếu lỗi parse JSON */ }
+                }
+
+                if (totalPrice > 0)
+                {
+                    // Tính điểm: 5% giá trị hóa đơn (VD: 150.000đ -> 7.500 điểm/VND)
+                    int earnedPoints = (int)(totalPrice * 0.05);
+
+                    // Lấy Profile của khách hàng
+                    var customerProfile = await _context.CustomerProfiles
+                        .FirstOrDefaultAsync(cp => cp.UserId == booking.CustomerId);
+
+                    // Nếu khách chưa có Profile thì tạo mới
+                    if (customerProfile == null)
+                    {
+                        // Tìm hạng thành viên mặc định (Thấp nhất - ví dụ Member)
+                        var defaultTier = await _context.MembershipTiers
+                            .OrderBy(t => t.MinPoints)
+                            .FirstOrDefaultAsync() 
+                            ?? new MembershipTier 
+                            { 
+                                Id = "TIER-01", 
+                                TierName = "Member", 
+                                MinPoints = 0, 
+                                PointsMultiplier = 1,
+                                DiscountPercent = 0
+                            }; // Fallback nếu DB chưa có Tier
+
+                        if (defaultTier.CreatedAt == default) 
+                        {
+                            _context.MembershipTiers.Add(defaultTier);
+                        }
+
+                        customerProfile = new CustomerProfile
+                        {
+                            UserId = booking.CustomerId,
+                            CurrentPoints = 0,
+                            AccumulatedPoints = 0,
+                            MembershipTierId = defaultTier.Id
+                        };
+                        _context.CustomerProfiles.Add(customerProfile);
+                    }
+
+                    // Cộng điểm
+                    customerProfile.CurrentPoints += earnedPoints;
+                    customerProfile.AccumulatedPoints += earnedPoints;
+
+                    // [Tùy chọn] Logic tự động nâng hạng:
+                    // Lấy tất cả các hạng, tìm hạng cao nhất mà AccumulatedPoints đạt được
+                    var eligibleTier = await _context.MembershipTiers
+                        .Where(t => t.MinPoints <= customerProfile.AccumulatedPoints && !t.IsDeleted)
+                        .OrderByDescending(t => t.MinPoints)
+                        .FirstOrDefaultAsync();
+
+                    if (eligibleTier != null && customerProfile.MembershipTierId != eligibleTier.Id)
+                    {
+                        // Nâng hạng cho khách!
+                        customerProfile.MembershipTierId = eligibleTier.Id;
+                    }
+                }
+            }
             
             await _context.SaveChangesAsync();
             return true;
@@ -265,6 +348,62 @@ namespace LunaWash.BLL.Services
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue)
             };
+        }
+
+        public async Task<IEnumerable<string>> GetAvailableTimeSlotsAsync(string branchId, DateOnly date)
+        {
+            var availableSlots = new List<string>();
+            
+            // 1. Giả định Giờ làm việc của tiệm: 08:00 đến 18:00 (mỗi slot 30 phút)
+            // Tương lai bạn có thể kéo từ bảng Branch Configuration nếu các chi nhánh có giờ làm việc khác nhau
+            var openTime = new TimeSpan(8, 0, 0);
+            var closeTime = new TimeSpan(18, 0, 0);
+            var slotDuration = TimeSpan.FromMinutes(30);
+
+            // 2. Lấy tổng số cầu rửa của chi nhánh (Tổng công suất phục vụ cùng lúc)
+            var totalWashSlots = await _context.WashSlots
+                .CountAsync(ws => ws.BranchId == branchId && !ws.IsDeleted);
+                
+            if (totalWashSlots == 0) return availableSlots; // Nếu chưa setup cầu rửa thì không có slot nào
+
+            // 3. Lấy tất cả lịch đặt TRONG NGÀY đó của chi nhánh
+            var bookingsOnDate = await _context.Bookings
+                .Where(b => b.BranchId == branchId 
+                         && b.BookingDate == date 
+                         && b.Status != "Cancelled" 
+                         && !b.IsDeleted)
+                .ToListAsync();
+
+            // 4. Mốc thời gian hiện tại để so sánh (không cho khách đặt giờ trong quá khứ)
+            var currentTimeVn = DateTime.UtcNow.AddHours(7);
+            var isToday = date == DateOnly.FromDateTime(currentTimeVn);
+
+            // 5. Quét từng khung 30 phút trong ngày
+            for (var time = openTime; time < closeTime; time += slotDuration)
+            {
+                var slotStart = date.ToDateTime(TimeOnly.FromTimeSpan(time));
+                var slotEnd = slotStart.Add(slotDuration);
+
+                // NẾU là ngày hôm nay: Bỏ qua các khung giờ trong quá khứ 
+                // (Chặn thêm 30p buffer: Ví dụ bây giờ là 08:15 thì không cho đặt 08:30 nữa, chỉ cho đặt từ 09:00 trở đi)
+                if (isToday && slotStart <= currentTimeVn.AddMinutes(30))
+                {
+                    continue;
+                }
+
+                // Đếm số lượng xe ĐANG RỬA trong khung giờ này
+                // Điều kiện chồng lấn (Overlap): Lịch Start < SlotEnd VÀ Lịch End > SlotStart
+                var overlappingBookings = bookingsOnDate.Count(b => 
+                    b.ScheduledStartTime < slotEnd && b.ScheduledEndTime > slotStart);
+
+                // Nếu số xe đang rửa < tổng số máy rửa => Vẫn còn chỗ (Available)
+                if (overlappingBookings < totalWashSlots)
+                {
+                    availableSlots.Add(time.ToString(@"hh\:mm")); // Trả về dạng "08:00", "08:30"
+                }
+            }
+
+            return availableSlots;
         }
     }
 }

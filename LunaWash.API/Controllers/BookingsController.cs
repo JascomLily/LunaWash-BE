@@ -71,5 +71,26 @@ namespace LunaWash.API.Controllers
 
             return Ok(new { message = "Hủy lịch đặt thành công." });
         }
+
+        [HttpGet("available-slots")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetAvailableSlots([FromQuery] string branchId, [FromQuery] string date)
+        {
+            if (string.IsNullOrEmpty(branchId) || string.IsNullOrEmpty(date))
+                return BadRequest(new { message = "Thiếu thông tin branchId hoặc date (yyyy-MM-dd)." });
+
+            if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", out var parsedDate))
+                return BadRequest(new { message = "Định dạng ngày không hợp lệ. Vui lòng dùng yyyy-MM-dd." });
+
+            try
+            {
+                var slots = await _bookingService.GetAvailableTimeSlotsAsync(branchId, parsedDate);
+                return Ok(slots);
+            }
+            catch (System.Exception ex)
+            {
+                return StatusCode(500, new { message = "Đã xảy ra lỗi khi lấy danh sách giờ trống.", details = ex.Message });
+            }
+        }
     }
 }

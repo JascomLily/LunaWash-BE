@@ -115,5 +115,37 @@ namespace LunaWash.BLL.Services
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+        public async Task<UserProfileResponseDTO?> GetUserProfileAsync(string userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.CustomerProfile)
+                    .ThenInclude(cp => cp.MembershipTier)
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+
+            if (user == null) return null;
+
+            LoyaltyInfoDTO? loyaltyInfo = null;
+            if (user.CustomerProfile != null)
+            {
+                loyaltyInfo = new LoyaltyInfoDTO
+                {
+                    CurrentPoints = user.CustomerProfile.CurrentPoints,
+                    AccumulatedPoints = user.CustomerProfile.AccumulatedPoints,
+                    TierName = user.CustomerProfile.MembershipTier?.TierName ?? "Member",
+                    DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0
+                };
+            }
+
+            return new UserProfileResponseDTO
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                Role = user.Role.RoleName,
+                Phone = user.PhoneNumber,
+                Loyalty = loyaltyInfo
+            };
+        }
     }
 }
