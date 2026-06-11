@@ -248,7 +248,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Email).HasMaxLength(150);
             entity.Property(e => e.FullName).HasMaxLength(150);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.Password).HasColumnName("PasswordHash").HasMaxLength(250);
+            entity.Property(e => e.Password).HasColumnName("Password").HasMaxLength(250);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
             entity.Property(e => e.RoleId)
                 .HasMaxLength(50)
