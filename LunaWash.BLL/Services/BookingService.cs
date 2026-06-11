@@ -59,7 +59,7 @@ namespace LunaWash.BLL.Services
             string packageName = "Gói Cơ Bản";
             string services = "Rửa sạch ngoại thất, làm khô tự động và xịt bóng lốp.";
             int basePrice = 150000;
-            int durationMinutes = 30;
+            int durationMinutes = dto.Duration > 0 ? dto.Duration : 30;
 
             if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
             {
@@ -91,7 +91,9 @@ namespace LunaWash.BLL.Services
             var endTime = startTime.AddMinutes(durationMinutes);
             var bookingDate = startTime.Date;
 
-            var washSlot = await _context.WashSlots.FirstOrDefaultAsync(ws => ws.BranchId == dto.BranchId);
+            var washSlot = !string.IsNullOrEmpty(dto.WashSlotId)
+                ? await _context.WashSlots.FirstOrDefaultAsync(ws => ws.Id == dto.WashSlotId && ws.BranchId == dto.BranchId)
+                : await _context.WashSlots.FirstOrDefaultAsync(ws => ws.BranchId == dto.BranchId);
             string dbSlotId = washSlot?.Id ?? "BRN-BT-01-WS-01"; 
 
             var notesObj = new {
@@ -124,6 +126,7 @@ namespace LunaWash.BLL.Services
 
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
+            await _context.Entry(booking).Reference(b => b.Branch).LoadAsync();
 
             return BuildBookingResponse(booking);
         }
@@ -131,11 +134,28 @@ namespace LunaWash.BLL.Services
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
             var bookings = await _context.Bookings
+                .Include(b => b.Branch)
                 .Where(b => b.CustomerId == userId)
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
             return bookings.Select(BuildBookingResponse);
+        }
+
+        public async Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId)
+        {
+            if (!DateOnly.TryParse(date, out var bookingDate)) return new List<OccupiedSlotDTO>();
+
+            var bookings = await _context.Bookings
+                .Where(b => b.BookingDate == bookingDate && b.WashSlotId == washSlotId && b.Status != "Cancelled" && b.IsDeleted == false)
+                .Select(b => new OccupiedSlotDTO
+                {
+                    StartTime = b.ScheduledStartTime,
+                    EndTime = b.ScheduledEndTime
+                })
+                .ToListAsync();
+
+            return bookings;
         }
 
         public async Task<bool> CancelBookingAsync(string userId, string bookingId)
@@ -183,8 +203,8 @@ namespace LunaWash.BLL.Services
                 Services = services,
                 VehicleInfo = vehicleInfo,
                 Extras = extras,
-                BranchInfo = b.BranchId == "BRN-Q1-01" ? "Chi nhánh Quận 1" : (b.BranchId == "BRN-BT-01" ? "Chi nhánh Bình Thạnh" : b.BranchId),
-                SlotName = b.WashSlotId == "BRN-Q1-01-WS-01" ? "Trạm 1" : (b.WashSlotId == "BRN-Q1-01-WS-02" ? "Trạm 2" : "Trạm 1"),
+                BranchInfo = b.Branch?.BranchName ?? b.BranchId,
+                SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
                 TimeRange = $"{timeRange}\n{b.ScheduledStartTime:dd/MM/yyyy}",
                 TotalPrice = totalPrice,
                 Status = b.Status == "Cancelled" ? "Đã hủy" : (b.ScheduledEndTime < DateTime.UtcNow.AddHours(7) ? "Hoàn thành" : "Sắp đến"),
