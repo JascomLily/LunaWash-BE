@@ -10,5 +10,10 @@ namespace LunaWash.BLL.Services
         Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId);
         Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId);
         Task<bool> CancelBookingAsync(string userId, string bookingId);
+
+        Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId);
+        Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus);
+
+        Task<IEnumerable<string>> GetAvailableTimeSlotsAsync(string branchId, DateOnly date);
     }
 }

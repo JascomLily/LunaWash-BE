@@ -41,4 +41,9 @@ namespace LunaWash.BLL.DTOs
         public string PaymentMethod { get; set; } = null!;
         public DateTime BookingDate { get; set; }
     }
+    public class UpdateBookingStatusDTO
+    {
+        // Trạng thái mới: "Checked-In", "Washing", "Completed", "Cancelled"
+        public string Status { get; set; } = null!; 
+    }
 }

@@ -59,13 +59,17 @@ namespace LunaWash.API.Controllers
         public async Task<IActionResult> GetCurrentUser()
         {
             var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
 
             var userProfile = await _authService.GetUserProfileAsync(userId);
             
             if (userProfile == null)
             {
-                return NotFound(new { message = "User not found." });
+                return NotFound(new { message = "Không tìm thấy thông tin người dùng." });
             }
 
             return Ok(userProfile);
