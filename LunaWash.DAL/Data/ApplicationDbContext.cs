@@ -50,6 +50,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<WashSlot> WashSlots { get; set; }
 
+    public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
+
+    public virtual DbSet<PointHistory> PointHistories { get; set; }
+
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -308,6 +312,16 @@ public partial class ApplicationDbContext : DbContext
         });
 
         OnModelCreatingPartial(modelBuilder);
+
+        modelBuilder.Entity<ServiceReview>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.ToTable("ServiceReviews");
+
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.BookingId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Comment).HasMaxLength(500);
+        });
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
