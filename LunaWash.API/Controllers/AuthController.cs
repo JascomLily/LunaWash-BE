@@ -4,7 +4,6 @@ using LunaWash.BLL.DTOs;
 using LunaWash.BLL.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace LunaWash.API.Controllers
 {
@@ -60,12 +59,14 @@ namespace LunaWash.API.Controllers
         public async Task<IActionResult> GetCurrentUser()
         {
             var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized();
             }
 
             var userProfile = await _authService.GetUserProfileAsync(userId);
+            
             if (userProfile == null)
             {
                 return NotFound(new { message = "Không tìm thấy thông tin người dùng." });
