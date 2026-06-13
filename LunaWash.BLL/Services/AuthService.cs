@@ -128,6 +128,40 @@ namespace LunaWash.BLL.Services
             LoyaltyInfoDTO? loyaltyInfo = null;
             if (user.CustomerProfile != null)
             {
+                // ---------------- ĐOẠN CODE KIỂM TRA ĐIỂM HẾT HẠN 1 NĂM ----------------
+                // Tìm những đợt cộng điểm nào đã quá 1 năm (ExpiryDate <= Hiện tại) nhưng chưa xử lý hết hạn
+                var expiredRecords = await _context.PointHistories
+                    .Where(p => p.UserId == user.Id && p.RemainingPoints > 0 && p.ExpiryDate <= DateTime.UtcNow && !p.IsExpired)
+                    .ToListAsync();
+
+                if (expiredRecords.Any())
+                {
+                    int totalExpiredPoints = 0;
+                    foreach (var record in expiredRecords)
+                    {
+                        totalExpiredPoints += record.RemainingPoints;
+                        record.IsExpired = true;       // Đánh dấu đã xử lý hết hạn
+                        record.RemainingPoints = 0;    // Đưa số lượng điểm khả dụng về 0
+                    }
+
+                    // Ghi log hệ thống thu hồi điểm hết hạn
+                    var expireLog = new PointHistory
+                    {
+                        UserId = user.Id,
+                        Points = -totalExpiredPoints,
+                        RemainingPoints = 0,
+                        Description = $"Hệ thống tự động thu hồi {totalExpiredPoints} điểm thưởng do hết hạn 1 năm",
+                        CreatedAt = DateTime.UtcNow,
+                        ExpiryDate = null
+                    };
+                    _context.PointHistories.Add(expireLog);
+
+                    // Trừ thẳng vào điểm hiện tại của khách hàng (đảm bảo không âm)
+                    user.CustomerProfile.CurrentPoints = Math.Max(0, user.CustomerProfile.CurrentPoints - totalExpiredPoints);
+                    await _context.SaveChangesAsync();
+                }
+                // ----------------------------------------------------------------------
+
                 loyaltyInfo = new LoyaltyInfoDTO
                 {
                     CurrentPoints = user.CustomerProfile.CurrentPoints,
@@ -147,6 +181,6 @@ namespace LunaWash.BLL.Services
                 Loyalty = loyaltyInfo
             };
         }
-       
+
     }
 }

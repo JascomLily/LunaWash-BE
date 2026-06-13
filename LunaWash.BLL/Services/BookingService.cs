@@ -151,7 +151,8 @@ namespace LunaWash.BLL.Services
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
                     IsDeleted = false,
-                    BookingDate = DateOnly.FromDateTime(bookingDate)
+                    BookingDate = DateOnly.FromDateTime(bookingDate),
+                    TotalPrice = totalPrice
                 };
 
                 _context.Bookings.Add(booking);
@@ -167,6 +168,45 @@ namespace LunaWash.BLL.Services
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<bool> CompleteBookingAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            if (booking == null) return false;
+
+            booking.Status = "Completed"; // Hoặc trạng thái tương đương của dự án
+
+            // ĐIỀU KIỆN TÍCH ĐIỂM: Ví dụ mỗi 10.000đ đơn hàng được tính là 1 điểm
+            int earnedPoints = (int)(booking.TotalPrice / 10000);
+
+            if (earnedPoints > 0)
+            {
+                var profile = await _context.CustomerProfiles.FirstOrDefaultAsync(cp => cp.UserId == booking.CustomerId);
+                if (profile != null)
+                {
+                    // 1. Lưu lịch sử cộng điểm kèm thời hạn 1 năm
+                    var pointLog = new PointHistory
+                    {
+                        UserId = profile.UserId,
+                        Points = earnedPoints,
+                        RemainingPoints = earnedPoints, // Ban đầu toàn bộ điểm này đều khả dụng
+                        Description = $"Tích điểm từ đơn đặt lịch thành công #{booking.Id}",
+                        BookingId = booking.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        ExpiryDate = DateTime.UtcNow.AddYears(1), // ĐIỀU KIỆN HẾT HẠN 1 NĂM
+                        IsExpired = false
+                    };
+                    _context.PointHistories.Add(pointLog);
+
+                    // 2. Cập nhật vào hồ sơ khách hàng
+                    profile.CurrentPoints += earnedPoints;
+                    profile.AccumulatedPoints += earnedPoints; // Điểm trọn đời để giữ/lên hạng
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
@@ -404,6 +444,59 @@ namespace LunaWash.BLL.Services
             }
 
             return availableSlots;
+        }
+
+        public async Task<bool> UsePointsAsync(string userId, int pointsToUse)
+        {
+            var profile = await _context.CustomerProfiles.FirstOrDefaultAsync(cp => cp.UserId == userId);
+            if (profile == null || profile.CurrentPoints < pointsToUse) return false;
+
+            // Lấy tất cả các đợt CỘNG điểm còn hạn sử dụng, xếp từ cũ nhất đến mới nhất (FIFO)
+            var availablePoints = await _context.PointHistories
+                .Where(p => p.UserId == userId && p.RemainingPoints > 0 && p.ExpiryDate > DateTime.UtcNow && !p.IsExpired)
+                .OrderBy(p => p.CreatedAt)
+                .ToListAsync();
+
+            int pointsLeftToDeduct = pointsToUse;
+
+            foreach (var record in availablePoints)
+            {
+                if (record.RemainingPoints >= pointsLeftToDeduct)
+                {
+                    record.RemainingPoints -= pointsLeftToDeduct;
+                    pointsLeftToDeduct = 0;
+                    break;
+                }
+                else
+                {
+                    pointsLeftToDeduct -= record.RemainingPoints;
+                    record.RemainingPoints = 0; // Đợt điểm này đã bị tiêu hết sạch
+                }
+            }
+
+            // Nếu đã khấu trừ đủ cấu trúc điểm hợp lệ
+            if (pointsLeftToDeduct == 0)
+            {
+                // Ghi log giao dịch TRỪ điểm
+                var deductLog = new PointHistory
+                {
+                    UserId = userId,
+                    Points = -pointsToUse,
+                    RemainingPoints = 0,
+                    Description = "Sử dụng điểm thưởng để giảm giá đơn hàng",
+                    CreatedAt = DateTime.UtcNow,
+                    ExpiryDate = null // Giao dịch trừ không cần ngày hết hạn
+                };
+                _context.PointHistories.Add(deductLog);
+
+                // Cập nhật lại số điểm hiện tại của tài khoản
+                profile.CurrentPoints -= pointsToUse;
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            return false; // Không đủ điểm hợp lệ (hoặc điểm đã bị hết hạn trước đó)
         }
     }
 }

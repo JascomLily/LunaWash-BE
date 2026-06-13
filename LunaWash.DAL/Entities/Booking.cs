@@ -20,6 +20,8 @@ public partial class Booking
     public DateTime ScheduledEndTime { get; set; }
 
     public string Status { get; set; } = null!;
+    
+    public decimal TotalPrice { get; set; }
 
     public DateTime? CheckInTime { get; set; }
 
