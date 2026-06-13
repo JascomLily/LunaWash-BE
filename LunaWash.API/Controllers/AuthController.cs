@@ -75,6 +75,31 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO updateDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            // Lấy ID người dùng từ JWT Token
+            var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var success = await _authService.UpdateProfileAsync(userId, updateDto);
+            if (!success)
+            {
+                return NotFound(new { message = "Không tìm thấy người dùng." });
+            }
+
+            return Ok(new { message = "Đã cập nhật thông tin thành công." });
+        }
+
+        [Authorize]
         [HttpGet("check")]
         public IActionResult CheckLogin()
         {

@@ -44,6 +44,21 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
+            // Retrieve Tier for Customer
+            string tierName = "Đồng";
+            if (user.Role.RoleName == "Customer")
+            {
+                var profile = await _context.CustomerProfiles
+                    .Include(cp => cp.MembershipTier)
+                    .FirstOrDefaultAsync(cp => cp.UserId == user.Id);
+
+                if (profile != null && profile.MembershipTier != null)
+                {
+                    tierName = profile.MembershipTier.TierName;
+                    if (tierName == "Member") tierName = "Đồng";
+                }
+            }
+
             // Generate JWT
             var token = GenerateJwtToken(user);
 
@@ -52,7 +67,8 @@ namespace LunaWash.BLL.Services
                 Token = token,
                 FullName = user.FullName,
                 Email = user.Email,
-                Role = user.Role.RoleName
+                Role = user.Role.RoleName,
+                Tier = tierName
             };
         }
 
@@ -82,6 +98,37 @@ namespace LunaWash.BLL.Services
             user.Password = registerDto.Password;
 
             _context.Users.Add(user);
+
+            // Create default profile for Customer
+            if (customerRole != null && customerRole.Id == user.RoleId)
+            {
+                var defaultTier = await _context.MembershipTiers.FirstOrDefaultAsync(t => t.Id == "TIER-MEM");
+                if (defaultTier != null)
+                {
+                    var profile = new CustomerProfile
+                    {
+                        UserId = user.Id,
+                        CurrentPoints = 0,
+                        AccumulatedPoints = 0,
+                        MembershipTierId = defaultTier.Id
+                    };
+                    _context.CustomerProfiles.Add(profile);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateProfileAsync(string userId, UpdateProfileDTO updateDto)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return false;
+
+            user.FullName = updateDto.FullName;
+            user.PhoneNumber = updateDto.Phone;
+            user.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
             return true;
         }

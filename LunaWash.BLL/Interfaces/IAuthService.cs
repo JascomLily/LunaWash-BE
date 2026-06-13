@@ -8,5 +8,6 @@ namespace LunaWash.BLL.Interfaces
         Task<LoginResponseDTO?> LoginAsync(LoginRequestDTO loginDto);
         Task<bool> RegisterAsync(RegisterRequestDTO registerDto);
         Task<UserProfileResponseDTO?> GetUserProfileAsync(string userId);
+        Task<bool> UpdateProfileAsync(string userId, UpdateProfileDTO updateDto);
     }
 }

@@ -50,6 +50,17 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        [HttpGet("occupied-slots")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetOccupiedSlots([FromQuery] string date, [FromQuery] string washSlotId)
+        {
+            if (string.IsNullOrEmpty(date) || string.IsNullOrEmpty(washSlotId))
+                return BadRequest("date and washSlotId are required.");
+                
+            var slots = await _bookingService.GetOccupiedSlotsAsync(date, washSlotId);
+            return Ok(slots);
+        }
+
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {

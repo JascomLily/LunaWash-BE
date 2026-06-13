@@ -7,8 +7,10 @@ namespace LunaWash.BLL.DTOs
     {
         [Required]
         public string BranchId { get; set; } = null!;
+        public string? WashSlotId { get; set; }
         [Required]
         public string VehicleTypeId { get; set; } = null!;
+        public int Duration { get; set; }
         public string? VehicleBrand { get; set; }
         public string? VehicleModel { get; set; }
         public string? LicensePlate { get; set; }
@@ -16,6 +18,12 @@ namespace LunaWash.BLL.DTOs
         public DateTime ScheduledStartTime { get; set; }
         public string? Notes { get; set; }
         public List<string> ServicePriceIds { get; set; } = new List<string>();
+    }
+
+    public class OccupiedSlotDTO
+    {
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
     }
 
     public class BookingResponseDTO
