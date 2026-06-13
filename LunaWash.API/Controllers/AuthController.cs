@@ -56,22 +56,19 @@ namespace LunaWash.API.Controllers
 
         [Authorize]
         [HttpGet("me")]
-        public IActionResult GetCurrentUser()
+        public async Task<IActionResult> GetCurrentUser()
         {
             var userId = User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var email = User.FindFirstValue("email") ?? User.FindFirstValue(ClaimTypes.Email);
-            var fullName = User.FindFirstValue(ClaimTypes.Name);
-            var role = User.FindFirstValue(ClaimTypes.Role);
-            var phone = User.FindFirstValue(ClaimTypes.MobilePhone);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            return Ok(new
+            var userProfile = await _authService.GetUserProfileAsync(userId);
+            
+            if (userProfile == null)
             {
-                Id = userId,
-                Email = email,
-                FullName = fullName,
-                Role = role,
-                Phone = phone
-            });
+                return NotFound(new { message = "User not found." });
+            }
+
+            return Ok(userProfile);
         }
 
         [Authorize]

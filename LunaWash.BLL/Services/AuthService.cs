@@ -127,10 +127,30 @@ namespace LunaWash.BLL.Services
 
             user.FullName = updateDto.FullName;
             user.PhoneNumber = updateDto.Phone;
+            user.Address = updateDto.Address;
             user.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<UserProfileDTO?> GetUserProfileAsync(string userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null) return null;
+
+            return new UserProfileDTO
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                Role = user.Role.RoleName,
+                Phone = user.PhoneNumber ?? "",
+                Address = user.Address ?? ""
+            };
         }
 
         private string GenerateJwtToken(User user)

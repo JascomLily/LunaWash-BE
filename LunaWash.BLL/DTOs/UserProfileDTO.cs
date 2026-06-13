@@ -1,17 +1,12 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace LunaWash.BLL.DTOs
 {
-    public class UpdateProfileDTO
+    public class UserProfileDTO
     {
-        [Required]
-        [MaxLength(150)]
+        public string Id { get; set; } = null!;
+        public string Email { get; set; } = null!;
         public string FullName { get; set; } = null!;
-
-        [Required]
-        [MaxLength(20)]
+        public string Role { get; set; } = null!;
         public string Phone { get; set; } = null!;
-
         public string? Address { get; set; }
     }
 }
