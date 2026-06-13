@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
+
 namespace LunaWash.BLL.Helpers
 {
     public class VnPayLibrary
@@ -93,12 +94,12 @@ namespace LunaWash.BLL.Helpers
 
     public class VnPayCompare : IComparer<string>
     {
-        public int Compare(string x, string y)
+        public int Compare(string? x, string? y)
         {
             if (x == y) return 0;
             if (x == null) return -1;
             if (y == null) return 1;
-            var vnpCompare = CompareOptions.Ordinal;
+            var vnpCompare = StringComparison.Ordinal;
             return string.Compare(x, y, vnpCompare);
         }
     }

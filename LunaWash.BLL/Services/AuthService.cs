@@ -120,7 +120,7 @@ namespace LunaWash.BLL.Services
             var user = await _context.Users
                 .Include(u => u.Role)
                 .Include(u => u.CustomerProfile)
-                    .ThenInclude(cp => cp.MembershipTier)
+                    .ThenInclude(cp => cp!.MembershipTier)
                 .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
 
             if (user == null) return null;
@@ -147,5 +147,6 @@ namespace LunaWash.BLL.Services
                 Loyalty = loyaltyInfo
             };
         }
+       
     }
 }
