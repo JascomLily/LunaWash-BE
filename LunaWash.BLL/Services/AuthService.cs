@@ -68,7 +68,8 @@ namespace LunaWash.BLL.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role.RoleName,
-                Tier = tierName
+                Tier = tierName,
+                BranchId = user.BranchId
             };
         }
 
@@ -134,24 +135,7 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
-        public async Task<UserProfileDTO?> GetUserProfileAsync(string userId)
-        {
-            var user = await _context.Users
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (user == null) return null;
-
-            return new UserProfileDTO
-            {
-                Id = user.Id,
-                Email = user.Email,
-                FullName = user.FullName,
-                Role = user.Role.RoleName,
-                Phone = user.PhoneNumber ?? "",
-                Address = user.Address ?? ""
-            };
-        }
 
         private string GenerateJwtToken(User user)
         {
@@ -244,7 +228,8 @@ namespace LunaWash.BLL.Services
                 Email = user.Email,
                 FullName = user.FullName,
                 Role = user.Role.RoleName,
-                Phone = user.PhoneNumber,
+                Phone = user.PhoneNumber ?? "",
+                Address = user.Address,
                 Loyalty = loyaltyInfo
             };
         }
