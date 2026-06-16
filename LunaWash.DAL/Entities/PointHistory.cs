@@ -8,6 +8,7 @@ namespace LunaWash.DAL.Entities
 
         
         public string UserId { get; set; } = null!;
+        [System.ComponentModel.DataAnnotations.Schema.ForeignKey("UserId")]
         public CustomerProfile CustomerProfile { get; set; } = null!;
 
         public int Points { get; set; }
