@@ -298,6 +298,11 @@ namespace LunaWash.BLL.Services
             // ==========================================
             if (newStatus == "Completed")
             {
+                if (booking.CheckoutTime == null)
+                {
+                    booking.CheckoutTime = DateTime.UtcNow.AddHours(7);
+                }
+
                 int totalPrice = 0;
                 
                 // Lấy tổng tiền từ cột Notes (Lưu JSON)
@@ -418,7 +423,8 @@ namespace LunaWash.BLL.Services
                          (b.Status == "Washing" || b.Status == "Checked-In") ? "Đang rửa" : 
                          "Sắp đến",
                 PaymentMethod = paymentMethod,
-                BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue)
+                BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
+                CheckoutTime = b.CheckoutTime
             };
         }
 
