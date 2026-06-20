@@ -50,7 +50,9 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<WashSlot> WashSlots { get; set; }
 
-    public virtual  DbSet<PointHistory> PointHistories { get; set; }
+    public virtual DbSet<PointHistory> PointHistories { get; set; }
+
+    public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
 
 
 
@@ -307,6 +309,33 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Branch).WithMany(p => p.WashSlots)
                 .HasForeignKey(d => d.BranchId)
                 .HasConstraintName("FK_WashSlots_Branches");
+        });
+
+        modelBuilder.Entity<ServiceReview>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_ServiceReviews");
+
+            entity.Property(e => e.Id)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.BookingId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.BranchId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Comment).HasMaxLength(1000);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+
+            entity.HasOne(d => d.Booking).WithMany()
+                .HasForeignKey(d => d.BookingId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ServiceReviews_Bookings");
+
+            entity.HasOne(d => d.Branch).WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ServiceReviews_Branches");
         });
 
         OnModelCreatingPartial(modelBuilder);

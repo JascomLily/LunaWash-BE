@@ -221,7 +221,19 @@ namespace LunaWash.BLL.Services
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var reviews = await _context.ServiceReviews
+                .Where(r => bookingIds.Contains(r.BookingId))
+                .ToDictionaryAsync(r => r.BookingId, r => r.OverallRating);
+
+            return bookings.Select(b => {
+                var dto = BuildBookingResponse(b);
+                if (reviews.TryGetValue(b.Id, out double rating))
+                {
+                    dto.Rating = rating;
+                }
+                return dto;
+            });
         }
 
         public async Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId)
@@ -272,7 +284,19 @@ namespace LunaWash.BLL.Services
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var reviews = await _context.ServiceReviews
+                .Where(r => bookingIds.Contains(r.BookingId))
+                .ToDictionaryAsync(r => r.BookingId, r => r.OverallRating);
+
+            return bookings.Select(b => {
+                var dto = BuildBookingResponse(b);
+                if (reviews.TryGetValue(b.Id, out double rating))
+                {
+                    dto.Rating = rating;
+                }
+                return dto;
+            });
         }
         
         public async Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus)
