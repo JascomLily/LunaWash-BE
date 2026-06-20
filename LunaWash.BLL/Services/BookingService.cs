@@ -253,13 +253,21 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
-        public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId)
+        public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)
         {
-            var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+            DateOnly targetDate;
+            if (!string.IsNullOrEmpty(dateString) && DateOnly.TryParse(dateString, out var parsedDate))
+            {
+                targetDate = parsedDate;
+            }
+            else
+            {
+                targetDate = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7));
+            }
 
             var bookings = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
-                         && b.BookingDate == today 
+                         && b.BookingDate == targetDate 
                          && !b.IsDeleted)
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
@@ -280,7 +288,7 @@ namespace LunaWash.BLL.Services
             booking.UpdatedAt = DateTime.UtcNow;
             
             // Xử lý Check-in
-            if (newStatus == "Checked-In" && booking.CheckInTime == null)
+            if ((newStatus == "Checked-In" || newStatus == "Washing") && booking.CheckInTime == null)
             {
                 booking.CheckInTime = DateTime.UtcNow.AddHours(7);
             }
@@ -290,6 +298,11 @@ namespace LunaWash.BLL.Services
             // ==========================================
             if (newStatus == "Completed")
             {
+                if (booking.CheckoutTime == null)
+                {
+                    booking.CheckoutTime = DateTime.UtcNow.AddHours(7);
+                }
+
                 int totalPrice = 0;
                 
                 // Lấy tổng tiền từ cột Notes (Lưu JSON)
@@ -405,9 +418,13 @@ namespace LunaWash.BLL.Services
                 SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
                 TimeRange = $"{timeRange}\n{b.ScheduledStartTime:dd/MM/yyyy}",
                 TotalPrice = totalPrice,
-                Status = b.Status == "Cancelled" ? "Đã hủy" : (b.ScheduledEndTime < DateTime.UtcNow.AddHours(7) ? "Hoàn thành" : "Sắp đến"),
+                Status = b.Status == "Cancelled" ? "Đã hủy" : 
+                         b.Status == "Completed" ? "Hoàn thành" : 
+                         (b.Status == "Washing" || b.Status == "Checked-In") ? "Đang rửa" : 
+                         "Sắp đến",
                 PaymentMethod = paymentMethod,
-                BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue)
+                BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
+                CheckoutTime = b.CheckoutTime
             };
         }
 
@@ -518,6 +535,85 @@ namespace LunaWash.BLL.Services
             }
 
             return false; // Không đủ điểm hợp lệ (hoặc điểm đã bị hết hạn trước đó)
+        }
+
+        public async Task<(bool Success, string Message)> AddInteriorCleaningAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return (false, "Không tìm thấy lịch đặt.");
+            if (booking.Status != "Pending") return (false, "Chỉ có thể thêm dịch vụ khi xe đang chờ.");
+
+            // Xác định số lượng slot cần thêm dựa trên loại xe
+            int totalSlots = 1;
+            int extraPrice = 0;
+
+            switch (booking.VehicleTypeId)
+            {
+                case "VT-OTO-2C": totalSlots = 3; extraPrice = 500000; break;
+                case "VT-OTO-4C": totalSlots = 4; extraPrice = 700000; break;
+                case "VT-OTO-7C": totalSlots = 5; extraPrice = 1000000; break;
+                case "VT-OTO-BT": totalSlots = 6; extraPrice = 1100000; break;
+                case "VT-OTO-SUV": totalSlots = 6; extraPrice = 1100000; break;
+                default: totalSlots = 4; extraPrice = 700000; break;
+            }
+
+            int extraSlots = totalSlots - 1; 
+            if (extraSlots <= 0) return (false, "Loại xe này không áp dụng thêm slot.");
+
+            // Giả định mỗi slot kéo dài 30 phút, hoặc tính toán dựa trên tổng thời lượng.
+            // Ở front-end, thời gian slot là 30 phút, booking 1 slot chiếm 30p (dù rửa có thể nhanh hơn).
+            var newEndTime = booking.ScheduledEndTime.AddMinutes(extraSlots * 30);
+
+            // Kiểm tra trùng lịch trên cùng trạm
+            var overlappingCount = await _context.Bookings
+                .Where(b => b.WashSlotId == booking.WashSlotId
+                         && b.BookingDate == booking.BookingDate
+                         && b.Status != "Cancelled"
+                         && !b.IsDeleted
+                         && b.Id != booking.Id
+                         && b.ScheduledStartTime < newEndTime
+                         && b.ScheduledEndTime > booking.ScheduledEndTime) // Chỉ check các xe nằm sau booking hiện tại
+                .CountAsync();
+
+            if (overlappingCount > 0)
+            {
+                return (false, $"Kẹt lịch! Không đủ {extraSlots} khung giờ (slot) trống liên tiếp ngay phía sau trên cùng trạm này.");
+            }
+
+            booking.ScheduledEndTime = newEndTime;
+            booking.TotalPrice += extraPrice;
+
+            if (!string.IsNullOrEmpty(booking.Notes))
+            {
+                try
+                {
+                    var node = System.Text.Json.Nodes.JsonNode.Parse(booking.Notes);
+                    if (node != null)
+                    {
+                        var currentServices = node["services"]?.ToString();
+                        if (!string.IsNullOrEmpty(currentServices) && !currentServices.Contains("Vệ sinh nội thất"))
+                        {
+                            node["services"] = currentServices + " + Vệ sinh nội thất";
+                        }
+                        
+                        var currentPackage = node["packageName"]?.ToString();
+                        if (!string.IsNullOrEmpty(currentPackage) && !currentPackage.Contains("VỆ SINH NỘI THẤT"))
+                        {
+                            node["packageName"] = currentPackage + " + VỆ SINH NỘI THẤT";
+                        }
+
+                        node["totalPrice"] = booking.TotalPrice;
+                        node["timeRange"] = $"{booking.ScheduledStartTime:HH:mm} - {newEndTime:HH:mm}";
+                        booking.Notes = node.ToJsonString();
+                    }
+                }
+                catch { }
+            }
+
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return (true, "Đã thêm dịch vụ vệ sinh nội thất thành công.");
         }
     }
 }

@@ -20,9 +20,9 @@ namespace LunaWash.API.Controllers
 
         
         [HttpGet("today/{branchId}")]
-        public async Task<IActionResult> GetTodayQueue(string branchId)
+        public async Task<IActionResult> GetTodayQueue(string branchId, [FromQuery] string? date)
         {
-            var bookings = await _bookingService.GetTodayBookingsForStaffAsync(branchId);
+            var bookings = await _bookingService.GetTodayBookingsForStaffAsync(branchId, date);
             return Ok(bookings);
         }
 
@@ -36,6 +36,15 @@ namespace LunaWash.API.Controllers
             if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt." });
 
             return Ok(new { message = $"Đã cập nhật trạng thái thành: {dto.Status}" });
+        }
+
+        [HttpPut("{id}/add-interior-cleaning")]
+        public async Task<IActionResult> AddInteriorCleaning(string id)
+        {
+            var (success, message) = await _bookingService.AddInteriorCleaningAsync(id);
+            if (!success) return BadRequest(new { message });
+
+            return Ok(new { message });
         }
     }
 }

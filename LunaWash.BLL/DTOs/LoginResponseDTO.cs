@@ -7,5 +7,6 @@ namespace LunaWash.BLL.DTOs
         public string Email { get; set; } = null!;
         public string Role { get; set; } = null!;
         public string Tier { get; set; } = null!;
+        public string? BranchId { get; set; }
     }
 }
