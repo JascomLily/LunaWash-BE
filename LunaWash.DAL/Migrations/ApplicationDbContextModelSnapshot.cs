@@ -108,7 +108,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasIndex(new[] { "PriorityScore" }, "IX_Bookings_PriorityScore")
                         .IsDescending();
 
-                    b.ToTable("Bookings");
+                    b.ToTable("Bookings", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.Branch", b =>
@@ -152,7 +152,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Branches__3214EC0718E6E656");
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.CustomerProfile", b =>
@@ -179,7 +179,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("MembershipTierId");
 
-                    b.ToTable("CustomerProfiles");
+                    b.ToTable("CustomerProfiles", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.CustomerVehicle", b =>
@@ -229,7 +229,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("VehicleTypeId");
 
-                    b.ToTable("CustomerVehicles");
+                    b.ToTable("CustomerVehicles", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.MembershipTier", b =>
@@ -274,7 +274,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Membersh__3214EC07E290A73D");
 
-                    b.ToTable("MembershipTiers");
+                    b.ToTable("MembershipTiers", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.PointHistory", b =>
@@ -319,7 +319,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("CustomerProfileUserId");
 
-                    b.ToTable("PointHistories");
+                    b.ToTable("PointHistories", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.Role", b =>
@@ -352,7 +352,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("Id")
                         .HasName("PK__Roles__3214EC076A8FEDEE");
 
-                    b.ToTable("Roles");
+                    b.ToTable("Roles", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.ServicePrice", b =>
@@ -401,7 +401,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("VehicleTypeId");
 
-                    b.ToTable("ServicePrices");
+                    b.ToTable("ServicePrices", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.User", b =>
@@ -463,7 +463,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasIndex(new[] { "Email" }, "UQ__Users__A9D105344912FDD5")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.VehicleType", b =>
@@ -492,7 +492,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("Id")
                         .HasName("PK__VehicleT__3214EC071DB6C937");
 
-                    b.ToTable("VehicleTypes");
+                    b.ToTable("VehicleTypes", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.WashService", b =>
@@ -530,7 +530,7 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("Id")
                         .HasName("PK__WashServ__3214EC07ED7A729A");
 
-                    b.ToTable("WashServices");
+                    b.ToTable("WashServices", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.WashSlot", b =>
@@ -574,7 +574,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("WashSlots");
+                    b.ToTable("WashSlots", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.Booking", b =>

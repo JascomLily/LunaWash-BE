@@ -50,7 +50,9 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<WashSlot> WashSlots { get; set; }
 
-    public virtual  DbSet<PointHistory> PointHistories { get; set; }
+    public virtual DbSet<PointHistory> PointHistories { get; set; }
+
+    public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
 
 
 
