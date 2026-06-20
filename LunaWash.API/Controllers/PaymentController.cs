@@ -105,15 +105,15 @@ namespace LunaWash.API.Controllers
                         await _context.SaveChangesAsync();
                     }
                     
-                    return Ok(new { message = "Thanh toán thành công!", bookingId = bookingId });
+                    return Redirect($"http://localhost:5173/payment?status=success&bookingId={bookingId}");
                 }
                 else
                 {
-                    return BadRequest(new { message = $"Thanh toán thất bại. Mã lỗi: {vnp_ResponseCode}" });
+                    return Redirect($"http://localhost:5173/payment?status=failed&bookingId={bookingId}&errorCode={vnp_ResponseCode}");
                 }
             }
 
-            return BadRequest(new { message = "Sai chữ ký bảo mật (Invalid Signature)." });
+            return Redirect($"http://localhost:5173/payment?status=failed&bookingId={bookingId}&errorCode=InvalidSignature");
         }
     }
 }

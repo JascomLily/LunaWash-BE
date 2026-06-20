@@ -17,6 +17,8 @@ public partial class User
 
     public string RoleId { get; set; } = null!;
 
+    public string? BranchId { get; set; }
+
     public string? Address { get; set; }
 
     public bool IsActive { get; set; }

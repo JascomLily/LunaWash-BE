@@ -66,7 +66,8 @@ namespace LunaWash.BLL.Services
                 FullName = user.FullName,
                 Email = user.Email,
                 Role = user.Role.RoleName,
-                Tier = tierName
+                Tier = tierName,
+                BranchId = user.BranchId
             };
         }
 
@@ -129,7 +130,7 @@ namespace LunaWash.BLL.Services
             await _context.SaveChangesAsync();
             return true;
         }
-
+        
         public async Task<UserProfileResponseDTO?> GetUserProfileAsync(string userId)
         {
             var user = await _context.Users
@@ -190,6 +191,7 @@ namespace LunaWash.BLL.Services
                 FullName = user.FullName,
                 Role = user.Role.RoleName,
                 Phone = user.PhoneNumber ?? "",
+                Address = user.Address ?? "",
                 Loyalty = loyaltyInfo
             };
         }

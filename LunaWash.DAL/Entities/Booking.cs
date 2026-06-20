@@ -25,6 +25,8 @@ public partial class Booking
 
     public DateTime? CheckInTime { get; set; }
 
+    public DateTime? CheckoutTime { get; set; }
+
     public int PriorityScore { get; set; }
 
     public string? WashSlotId { get; set; }
