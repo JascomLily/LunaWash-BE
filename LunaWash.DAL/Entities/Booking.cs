@@ -41,9 +41,9 @@ public partial class Booking
 
     public virtual Branch Branch { get; set; } = null!;
 
+    public virtual ServiceReview? ServiceReview { get; set; }
+
     public virtual User Customer { get; set; } = null!;
-
-
 
     public virtual VehicleType VehicleType { get; set; } = null!;
 

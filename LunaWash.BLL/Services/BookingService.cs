@@ -165,7 +165,7 @@ namespace LunaWash.BLL.Services
                 // Nạp Reference từ nhánh main trước khi trả về
                 await _context.Entry(booking).Reference(b => b.Branch).LoadAsync();
 
-                return BuildBookingResponse(booking);
+                return BuildBookingResponse(booking, -1);
             }
             catch (Exception)
             {
@@ -221,7 +221,12 @@ namespace LunaWash.BLL.Services
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var ratings = await _context.ServiceReviews
+                .Where(r => bookingIds.Contains(r.BookingId))
+                .ToDictionaryAsync(r => r.BookingId, r => r.OverallRating);
+
+            return bookings.Select(b => BuildBookingResponse(b, ratings.GetValueOrDefault(b.Id, -1)));
         }
 
         public async Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId)
@@ -272,7 +277,7 @@ namespace LunaWash.BLL.Services
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            return bookings.Select(b => BuildBookingResponse(b, -1));
         }
         
         public async Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus)
@@ -382,7 +387,7 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
-        private BookingResponseDTO BuildBookingResponse(Booking b)
+        private BookingResponseDTO BuildBookingResponse(Booking b, double rating = -1)
         {
             string packageName = "Gói Cơ Bản";
             string services = "";
@@ -424,7 +429,8 @@ namespace LunaWash.BLL.Services
                          "Sắp đến",
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
-                CheckoutTime = b.CheckoutTime
+                CheckoutTime = b.CheckoutTime,
+                Rating = rating != -1 ? rating : null
             };
         }
 

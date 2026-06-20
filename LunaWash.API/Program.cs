@@ -1,5 +1,6 @@
 using System.Text;
 using LunaWash.BLL;
+using LunaWash.BLL.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -8,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddSwaggerGen();
 
 // Configure JWT Authentication
