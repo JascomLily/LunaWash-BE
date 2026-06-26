@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using LunaWash.DAL.Data;
 using LunaWash.DAL.Entities;
 using LunaWash.BLL.DTOs;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.BLL.Services
 {

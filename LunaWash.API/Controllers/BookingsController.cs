@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using LunaWash.BLL.DTOs;
 using LunaWash.BLL.Services;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.API.Controllers
 {

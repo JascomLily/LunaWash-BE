@@ -39,6 +39,8 @@ public partial class Booking
 
     public bool IsDeleted { get; set; }
 
+    public decimal TotalPrice { get; set; }
+
     public virtual Branch Branch { get; set; } = null!;
 
     public virtual User Customer { get; set; } = null!;

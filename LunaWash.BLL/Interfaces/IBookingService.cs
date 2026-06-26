@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using LunaWash.BLL.DTOs;
 
-namespace LunaWash.BLL.Services
+namespace LunaWash.BLL.Interfaces
 {
     public interface IBookingService
     {
