@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# App settings (Contains DB, JWT, SMTP passwords)
+appsettings.json
+appsettings.*.json
+
 # User-specific files
 *.rsuser
 *.suo

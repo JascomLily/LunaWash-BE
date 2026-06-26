@@ -19,13 +19,20 @@ namespace LunaWash.API.Controllers
             _reviewService = reviewService;
         }
 
+        private string GetCurrentUserId()
+        {
+            return User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                ?? User?.FindFirst("sub")?.Value 
+                ?? string.Empty;
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
             try
             {
-                var userId = User.FindFirst("id")?.Value;
-                if (userId == null) return Unauthorized();
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var review = await _reviewService.CreateReviewAsync(userId, dto);
                 return Ok(review);
@@ -50,8 +57,8 @@ namespace LunaWash.API.Controllers
         {
             try
             {
-                var userId = User.FindFirst("id")?.Value;
-                if (userId == null) return Unauthorized();
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var review = await _reviewService.UpdateReviewAsync(userId, bookingId, dto);
                 return Ok(review);
@@ -67,8 +74,8 @@ namespace LunaWash.API.Controllers
         {
             try
             {
-                var userId = User.FindFirst("id")?.Value;
-                if (userId == null) return Unauthorized();
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
                 var result = await _reviewService.DeleteReviewAsync(userId, bookingId);
                 if (result)

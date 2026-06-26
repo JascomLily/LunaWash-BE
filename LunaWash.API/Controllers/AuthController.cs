@@ -12,10 +12,12 @@ namespace LunaWash.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly IConfiguration _configuration;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, IConfiguration configuration)
         {
             _authService = authService;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
@@ -26,14 +28,21 @@ namespace LunaWash.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var result = await _authService.LoginAsync(loginDto);
-
-            if (result == null)
+            try
             {
-                return Unauthorized(new { message = "Invalid email or password." });
-            }
+                var result = await _authService.LoginAsync(loginDto);
 
-            return Ok(result);
+                if (result == null)
+                {
+                    return Unauthorized(new { message = "Invalid email or password." });
+                }
+
+                return Ok(result);
+            }
+            catch (System.UnauthorizedAccessException ex) when (ex.Message == "EmailNotVerified")
+            {
+                return StatusCode(403, new { message = "EmailNotVerified" });
+            }
         }
 
         [HttpPost("register")]
@@ -52,6 +61,97 @@ namespace LunaWash.API.Controllers
             }
 
             return Ok(new { message = "Registration successful." });
+        }
+
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var clientId = _configuration["Google:ClientId"];
+            if (string.IsNullOrEmpty(clientId))
+            {
+                return StatusCode(500, new { message = "Server is missing Google ClientId configuration." });
+            }
+
+            var result = await _authService.GoogleLoginAsync(request.Token, clientId);
+
+            if (result == null)
+            {
+                return BadRequest(new { message = "Đăng nhập Google thất bại. Token không hợp lệ." });
+            }
+
+            return Ok(result);
+        }
+
+        public class VerifyOtpRequest
+        {
+            public string Email { get; set; } = null!;
+            public string Otp { get; set; } = null!;
+        }
+
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+        {
+            var result = await _authService.VerifyOtpAsync(request.Email, request.Otp);
+            if (result)
+            {
+                return Ok(new { message = "Xác thực email thành công." });
+            }
+            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
+        }
+
+        public class ResendOtpRequest
+        {
+            public string Email { get; set; } = null!;
+        }
+
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request)
+        {
+            var result = await _authService.SendOtpAsync(request.Email);
+            if (result)
+            {
+                return Ok(new { message = "Đã gửi lại mã OTP." });
+            }
+            return BadRequest(new { message = "Email không tồn tại trong hệ thống." });
+        }
+
+        public class ForgotPasswordRequest
+        {
+            public string Email { get; set; } = null!;
+        }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var result = await _authService.SendOtpAsync(request.Email, "forgot-password");
+            if (result)
+            {
+                return Ok(new { message = "Mã OTP đã được gửi." });
+            }
+            return BadRequest(new { message = "Email không tồn tại trong hệ thống." });
+        }
+
+        public class ResetPasswordRequest
+        {
+            public string Email { get; set; } = null!;
+            public string Otp { get; set; } = null!;
+            public string NewPassword { get; set; } = null!;
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var result = await _authService.ResetPasswordAsync(request.Email, request.Otp, request.NewPassword);
+            if (result)
+            {
+                return Ok(new { message = "Đặt lại mật khẩu thành công." });
+            }
+            return BadRequest(new { message = "Mã OTP không hợp lệ hoặc đã hết hạn." });
         }
 
         [Authorize]

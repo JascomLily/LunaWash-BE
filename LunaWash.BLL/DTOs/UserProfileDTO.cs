@@ -8,6 +8,7 @@ namespace LunaWash.BLL.DTOs
         public string Role { get; set; } = null!;
         public string Phone { get; set; } = null!;
         public string? Address { get; set; }
+        public bool IsActive { get; set; }
         public LoyaltyInfoDTO? Loyalty { get; set; }
     }
 
