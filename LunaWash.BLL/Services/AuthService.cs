@@ -1,5 +1,6 @@
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Linq;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
@@ -44,7 +45,6 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
-            // Verify Password (Plain text logic as requested)
             if (user.Password != loginDto.Password)
             {
                 return null;
@@ -70,7 +70,6 @@ namespace LunaWash.BLL.Services
                 }
             }
 
-            // Generate JWT
             var token = GenerateJwtToken(user);
 
             return new LoginResponseDTO
@@ -200,10 +199,8 @@ namespace LunaWash.BLL.Services
             };
 
             user.Password = registerDto.Password;
-
             _context.Users.Add(user);
 
-            // Create default profile for Customer
             if (customerRole != null && customerRole.Id == user.RoleId)
             {
                 var defaultTier = await _context.MembershipTiers.FirstOrDefaultAsync(t => t.Id == "TIER-MEM");
@@ -311,6 +308,75 @@ namespace LunaWash.BLL.Services
             return false;
         }
 
+        public async Task<UserProfileResponseDTO?> GetUserProfileAsync(string userId)
+        {
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.CustomerProfile)
+                    .ThenInclude(cp => cp!.MembershipTier)
+                .FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
+
+            if (user == null) return null;
+
+            LoyaltyInfoDTO? loyaltyInfo = null;
+            if (user.CustomerProfile != null)
+            {
+                // ---------------- ĐOẠN CODE KIỂM TRA ĐIỂM HẾT HẠN 1 NĂM ----------------
+                // Tìm những đợt cộng điểm nào đã quá 1 năm (ExpiryDate <= Hiện tại) nhưng chưa xử lý hết hạn
+                var expiredRecords = await _context.PointHistories
+                    .Where(p => p.UserId == user.Id && p.RemainingPoints > 0 && p.ExpiryDate <= DateTime.UtcNow && !p.IsExpired)
+                    .ToListAsync();
+
+                if (expiredRecords.Any())
+                {
+                    int totalExpiredPoints = 0;
+                    foreach (var record in expiredRecords)
+                    {
+                        totalExpiredPoints += record.RemainingPoints;
+                        record.IsExpired = true;       // Đánh dấu đã xử lý hết hạn
+                        record.RemainingPoints = 0;    // Đưa số lượng điểm khả dụng về 0
+                    }
+
+                    // Ghi log hệ thống thu hồi điểm hết hạn
+                    var expireLog = new PointHistory
+                    {
+                        UserId = user.Id,
+                        Points = -totalExpiredPoints,
+                        RemainingPoints = 0,
+                        Description = $"Hệ thống tự động thu hồi {totalExpiredPoints} điểm thưởng do hết hạn 1 năm",
+                        CreatedAt = DateTime.UtcNow,
+                        ExpiryDate = null
+                    };
+                    _context.PointHistories.Add(expireLog);
+
+                    // Trừ thẳng vào điểm hiện tại của khách hàng (đảm bảo không âm)
+                    user.CustomerProfile.CurrentPoints = Math.Max(0, user.CustomerProfile.CurrentPoints - totalExpiredPoints);
+                    await _context.SaveChangesAsync();
+                }
+                // ----------------------------------------------------------------------
+
+                loyaltyInfo = new LoyaltyInfoDTO
+                {
+                    CurrentPoints = user.CustomerProfile.CurrentPoints,
+                    AccumulatedPoints = user.CustomerProfile.AccumulatedPoints,
+                    TierName = user.CustomerProfile.MembershipTier?.TierName ?? "Member",
+                    DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0
+                };
+            }
+
+            return new UserProfileResponseDTO
+            {
+                Id = user.Id,
+                Email = user.Email,
+                FullName = user.FullName,
+                Role = user.Role.RoleName,
+                Phone = user.PhoneNumber ?? "",
+                Address = user.Address,
+                IsActive = user.IsActive,
+                Loyalty = loyaltyInfo
+            };
+        }
+
         private string GenerateJwtToken(User user)
         {
             var key = _configuration["Jwt:Key"];
@@ -408,6 +474,5 @@ namespace LunaWash.BLL.Services
                 Loyalty = loyaltyInfo
             };
         }
-
     }
 }
