@@ -43,6 +43,10 @@ namespace LunaWash.API.Controllers
             {
                 return StatusCode(403, new { message = "EmailNotVerified" });
             }
+            catch (System.UnauthorizedAccessException ex) when (ex.Message == "GoogleLoginRequired")
+            {
+                return BadRequest(new { message = "Tài khoản này được đăng ký bằng Google. Vui lòng bấm nút Đăng nhập với Google." });
+            }
         }
 
         [HttpPost("register")]
