@@ -90,30 +90,44 @@ namespace LunaWash.API.Controllers
             string vnp_SecureHash = Request.Query["vnp_SecureHash"].ToString();
 
             bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, _configuration["VnPay:HashSecret"]!);
+            var frontendUrl = _configuration["VnPay:FrontendUrl"] ?? "http://localhost:5173";
+
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
+            decimal bookingAmount = booking?.TotalPrice ?? 0;
 
             if (checkSignature)
             {
                 if (vnp_ResponseCode == "00")
                 {
                     // Thanh toán thành công -> Cập nhật trạng thái Booking
-                    var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
                     if (booking != null)
                     {
-                        // Tuỳ logic dự án: Có thể update JSON "paymentMethod" sang "Đã thanh toán qua VNPAY"
-                        // Hoặc cập nhật Status nếu bạn có status "Paid"
-                        // booking.Status = "Paid";
+                        if (!string.IsNullOrEmpty(booking.Notes))
+                        {
+                            try
+                            {
+                                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                                var notesDict = JsonSerializer.Deserialize<System.Collections.Generic.Dictionary<string, object>>(booking.Notes, options);
+                                if (notesDict != null)
+                                {
+                                    notesDict["paymentMethod"] = "vnpay"; // Cập nhật thành vnpay (đã thanh toán thành công)
+                                    booking.Notes = JsonSerializer.Serialize(notesDict);
+                                }
+                            }
+                            catch { }
+                        }
                         await _context.SaveChangesAsync();
                     }
                     
-                    return Redirect($"http://localhost:5173/payment?status=success&bookingId={bookingId}");
+                    return Redirect($"{frontendUrl}/payment?status=success&bookingId={bookingId}&amount={bookingAmount}");
                 }
                 else
                 {
-                    return Redirect($"http://localhost:5173/payment?status=failed&bookingId={bookingId}&errorCode={vnp_ResponseCode}");
+                    return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode={vnp_ResponseCode}&amount={bookingAmount}");
                 }
             }
 
-            return Redirect($"http://localhost:5173/payment?status=failed&bookingId={bookingId}&errorCode=InvalidSignature");
+            return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode=InvalidSignature&amount={bookingAmount}");
         }
     }
 }
