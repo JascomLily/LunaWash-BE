@@ -122,7 +122,7 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay" : "tien-mat";
+                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay_pending" : "tien-mat";
                 int totalPrice = basePrice;
 
                 // Code xử lý slot lấy từ nhánh main
