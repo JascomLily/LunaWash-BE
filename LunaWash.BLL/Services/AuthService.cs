@@ -111,6 +111,7 @@ namespace LunaWash.BLL.Services
                         FullName = payload.Name ?? "Google User",
                         Email = userEmail,
                         RoleId = customerRole.Id,
+                        Role = customerRole,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         IsDeleted = false,
