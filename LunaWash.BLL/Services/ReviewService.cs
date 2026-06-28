@@ -25,8 +25,8 @@ namespace LunaWash.BLL.Services
             if (booking == null)
                 throw new Exception("Booking not found or you don't have permission.");
 
-            if (booking.Status != "Completed")
-                throw new Exception("Can only review completed bookings.");
+            if (booking.Status == "Cancelled")
+                throw new Exception("Cannot review a cancelled booking.");
 
             var existingReview = await _context.ServiceReviews
                 .FirstOrDefaultAsync(r => r.BookingId == dto.BookingId);
@@ -38,6 +38,8 @@ namespace LunaWash.BLL.Services
             {
                 Id = $"{dto.BookingId}-{DateTime.UtcNow:ddMMyy}",
                 BookingId = dto.BookingId,
+                CustomerId = userId,
+                BranchId = booking.BranchId,
                 OverallRating = dto.ServiceRating,
                 CleanlinessRating = dto.CleanlinessRating,
                 SpeedRating = dto.SpeedRating,

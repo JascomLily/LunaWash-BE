@@ -14,6 +14,17 @@ namespace LunaWash.DAL.Entities
         [MaxLength(50)]
         public string BookingId { get; set; } = null!;
 
+        [ForeignKey(nameof(BookingId))]
+        public Booking Booking { get; set; } = null!;
+
+        [Required]
+        [MaxLength(50)]
+        public string CustomerId { get; set; } = null!;
+
+        [Required]
+        [MaxLength(50)]
+        public string BranchId { get; set; } = null!;
+
         public double OverallRating { get; set; }
 
         public int CleanlinessRating { get; set; }
@@ -26,8 +37,5 @@ namespace LunaWash.DAL.Entities
         public string? Comment { get; set; }
 
         public DateTime CreatedAt { get; set; }
-
-        [ForeignKey("BookingId")]
-        public virtual Booking Booking { get; set; } = null!;
     }
 }
