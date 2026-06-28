@@ -17,6 +17,7 @@ namespace LunaWash.BLL.DTOs
         [Required]
         public DateTime ScheduledStartTime { get; set; }
         public string? Notes { get; set; }
+        public string? PackageId { get; set; }
         public List<string> ServicePriceIds { get; set; } = new List<string>();
     }
 

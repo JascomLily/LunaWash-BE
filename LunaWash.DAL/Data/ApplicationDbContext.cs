@@ -55,8 +55,11 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
 
     public virtual DbSet<Equipment> Equipments { get; set; }
-    
     public virtual DbSet<MaintenanceTask> MaintenanceTasks { get; set; }
+
+    public virtual DbSet<ServicePackage> ServicePackages { get; set; }
+
+    public virtual DbSet<PackageService> PackageServices { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -311,6 +314,33 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Branch).WithMany(p => p.WashSlots)
                 .HasForeignKey(d => d.BranchId)
                 .HasConstraintName("FK_WashSlots_Branches");
+        });
+
+        modelBuilder.Entity<ServicePackage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(150);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+        });
+
+        modelBuilder.Entity<PackageService>(entity =>
+        {
+            entity.HasKey(e => new { e.PackageId, e.ServiceId });
+            entity.Property(e => e.PackageId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.ServiceId).HasMaxLength(50).IsUnicode(false);
+
+            entity.HasOne(d => d.ServicePackage)
+                .WithMany(p => p.PackageServices)
+                .HasForeignKey(d => d.PackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.WashService)
+                .WithMany(p => p.PackageServices)
+                .HasForeignKey(d => d.ServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         OnModelCreatingPartial(modelBuilder);

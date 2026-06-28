@@ -3,13 +3,15 @@ using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
 
-public partial class WashService
+public partial class ServicePackage
 {
     public string Id { get; set; } = null!;
 
-    public string ServiceName { get; set; } = null!;
+    public string Name { get; set; } = null!;
 
     public string? Description { get; set; }
+
+    public decimal Price { get; set; }
 
     public bool IsActive { get; set; }
 
@@ -18,8 +20,6 @@ public partial class WashService
     public DateTime? UpdatedAt { get; set; }
 
     public bool IsDeleted { get; set; }
-
-    public virtual ICollection<ServicePrice> ServicePrices { get; set; } = new List<ServicePrice>();
 
     public virtual ICollection<PackageService> PackageServices { get; set; } = new List<PackageService>();
 }
