@@ -45,6 +45,12 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
+            // Chặn đăng nhập bằng form thường nếu tài khoản tạo bằng Google
+            if (user.Password == "GOOGLE_OAUTH_LOGIN")
+            {
+                throw new UnauthorizedAccessException("GoogleLoginRequired");
+            }
+
             if (user.Password != loginDto.Password)
             {
                 return null;
@@ -169,8 +175,7 @@ namespace LunaWash.BLL.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.ToString());
                 return null;
             }
         }
