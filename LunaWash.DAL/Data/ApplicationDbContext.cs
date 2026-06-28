@@ -50,9 +50,13 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<WashSlot> WashSlots { get; set; }
 
-    public virtual  DbSet<PointHistory> PointHistories { get; set; }
+    public virtual DbSet<PointHistory> PointHistories { get; set; }
 
+    public virtual DbSet<ServiceReview> ServiceReviews { get; set; }
 
+    public virtual DbSet<Equipment> Equipments { get; set; }
+    
+    public virtual DbSet<MaintenanceTask> MaintenanceTasks { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

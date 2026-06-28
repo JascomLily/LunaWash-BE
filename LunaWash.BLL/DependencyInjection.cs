@@ -22,8 +22,7 @@ namespace LunaWash.BLL
             services.AddScoped<IBookingService, BookingService>();
 
             services.AddScoped<IServiceManagementService, ServiceManagementService>();
-
-
+            services.AddScoped<IEquipmentService, EquipmentService>();
             return services;
         }
     }

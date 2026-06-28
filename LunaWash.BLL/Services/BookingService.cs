@@ -8,16 +8,19 @@ using Microsoft.EntityFrameworkCore;
 using LunaWash.DAL.Data;
 using LunaWash.DAL.Entities;
 using LunaWash.BLL.DTOs;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.BLL.Services
 {
     public class BookingService : IBookingService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public BookingService(ApplicationDbContext context)
+        public BookingService(ApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto)
@@ -119,7 +122,7 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay" : "tien-mat";
+                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay_pending" : "tien-mat";
                 int totalPrice = basePrice;
 
                 // Code xử lý slot lấy từ nhánh main
@@ -165,7 +168,48 @@ namespace LunaWash.BLL.Services
                 // Nạp Reference từ nhánh main trước khi trả về
                 await _context.Entry(booking).Reference(b => b.Branch).LoadAsync();
 
-                return BuildBookingResponse(booking);
+                // Gửi email xác nhận đặt lịch
+                var user = await _context.Users.FindAsync(userId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    string paymentStr = paymentMethod == "vnpay" ? "Thanh toán qua VNPay" : "Thanh toán trực tiếp";
+                    string emailBody = $@"
+                        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;'>
+                            <div style='text-align: center; margin-bottom: 20px;'>
+                                <h2 style='color: #4F46E5; margin: 0;'>LunaWash</h2>
+                                <p style='color: #6B7280; font-size: 14px; margin: 5px 0;'>Hệ thống Rửa Xe Đặt Lịch Chuyên Nghiệp</p>
+                            </div>
+                            
+                            <h3 style='color: #1F2937;'>Xác nhận đặt lịch thành công</h3>
+                            <p>Xin chào <strong>{user.FullName}</strong>,</p>
+                            <p>Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ tại LunaWash. Lịch hẹn của bạn đã được xác nhận với các thông tin chi tiết dưới đây:</p>
+                            
+                            <div style='background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                                <ul style='list-style-type: none; padding: 0; margin: 0;'>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Mã đặt lịch:</strong> {booking.Id}</li>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Ngày giờ:</strong> {startTime:HH:mm} - {endTime:HH:mm} ({bookingDate:dd/MM/yyyy})</li>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Địa điểm:</strong> {booking.Branch?.BranchName} - {booking.Branch?.Address}</li>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Dịch vụ:</strong> {packageName} ({services})</li>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Xe:</strong> {notesObj.vehicleInfo}</li>
+                                    <li style='margin-bottom: 10px;'><strong style='color: #374151;'>Phương thức:</strong> {paymentStr}</li>
+                                </ul>
+                            </div>
+                            
+                            <div style='text-align: right; padding-top: 10px; border-top: 2px dashed #E5E7EB;'>
+                                <h3 style='margin: 0; color: #1F2937;'>Tổng tiền: <span style='color: #4F46E5; font-size: 24px;'>{totalPrice:N0} VNĐ</span></h3>
+                            </div>
+                            
+                            <p style='color: #6B7280; font-size: 14px; margin-top: 30px;'>Vui lòng đến đúng giờ để được phục vụ tốt nhất. Nếu bạn có việc đột xuất, vui lòng hủy lịch trên ứng dụng ít nhất trước 30 phút.</p>
+                            
+                            <hr style='border: none; border-top: 1px solid #e1e1e1; margin: 30px 0;' />
+                            <p style='color: #9CA3AF; font-size: 12px; text-align: center;'>Đây là email tự động, vui lòng không trả lời.</p>
+                        </div>";
+
+                    // Gọi bất đồng bộ không chờ để phản hồi API nhanh hơn
+                    _ = _emailService.SendEmailAsync(user.Email, $"Xác Nhận Đặt Lịch #{booking.Id} - LunaWash", emailBody);
+                }
+
+                return BuildBookingResponse(booking, -1);
             }
             catch (Exception)
             {
@@ -221,7 +265,21 @@ namespace LunaWash.BLL.Services
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            var bookingIds = bookings.Select(b => b.Id).ToList();
+            var ratings = await _context.ServiceReviews
+                .Where(r => bookingIds.Contains(r.BookingId))
+                .ToDictionaryAsync(r => r.BookingId, r => r.OverallRating);
+
+            // Fetch vehicles to provide fallback vehicleInfo
+            var userVehicles = await _context.CustomerVehicles
+                .Where(v => v.CustomerId == userId)
+                .ToListAsync();
+
+            return bookings.Select(b => {
+                var vehicle = userVehicles.FirstOrDefault(v => v.VehicleTypeId == b.VehicleTypeId);
+                string dbVehicleInfo = vehicle != null ? $"{vehicle.VehicleModel} • {vehicle.LicensePlate}" : "";
+                return BuildBookingResponse(b, ratings.GetValueOrDefault(b.Id, -1), dbVehicleInfo);
+            });
         }
 
         public async Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId)
@@ -250,6 +308,41 @@ namespace LunaWash.BLL.Services
             booking.Status = "Cancelled";
             booking.IsDeleted = true;
             await _context.SaveChangesAsync();
+
+            // Gửi email thông báo hủy lịch
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null && !string.IsNullOrEmpty(user.Email))
+            {
+                await _context.Entry(booking).Reference(b => b.Branch).LoadAsync();
+                string branchName = booking.Branch?.BranchName ?? "LunaWash";
+                
+                string emailBody = $@"
+                    <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;'>
+                        <div style='text-align: center; margin-bottom: 20px;'>
+                            <h2 style='color: #EF4444; margin: 0;'>LunaWash</h2>
+                            <p style='color: #6B7280; font-size: 14px; margin: 5px 0;'>Thông báo hủy lịch hẹn</p>
+                        </div>
+                        
+                        <h3 style='color: #1F2937;'>Lịch hẹn đã được hủy</h3>
+                        <p>Xin chào <strong>{user.FullName}</strong>,</p>
+                        <p>Chúng tôi nhận được yêu cầu hủy lịch hẹn của bạn tại chi nhánh <strong>{branchName}</strong>.</p>
+                        
+                        <div style='background-color: #FEF2F2; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #FCA5A5;'>
+                            <ul style='list-style-type: none; padding: 0; margin: 0; color: #991B1B;'>
+                                <li style='margin-bottom: 5px;'><strong>Mã đặt lịch:</strong> {booking.Id}</li>
+                                <li style='margin-bottom: 5px;'><strong>Ngày giờ dự kiến:</strong> {booking.ScheduledStartTime:HH:mm} ({booking.BookingDate.ToString("dd/MM/yyyy")})</li>
+                            </ul>
+                        </div>
+                        
+                        <p style='color: #6B7280; font-size: 14px;'>Nếu bạn có nhu cầu rửa xe trong tương lai, đừng ngần ngại đặt lại lịch hẹn trên hệ thống của chúng tôi nhé. Hẹn gặp lại bạn!</p>
+                        
+                        <hr style='border: none; border-top: 1px solid #e1e1e1; margin: 30px 0;' />
+                        <p style='color: #9CA3AF; font-size: 12px; text-align: center;'>Đây là email tự động, vui lòng không trả lời.</p>
+                    </div>";
+
+                _ = _emailService.SendEmailAsync(user.Email, $"Thông báo Hủy Lịch #{booking.Id} - LunaWash", emailBody);
+            }
+
             return true;
         }
 
@@ -272,7 +365,16 @@ namespace LunaWash.BLL.Services
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
 
-            return bookings.Select(BuildBookingResponse);
+            var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
+            var vehicles = await _context.CustomerVehicles
+                .Where(v => customerIds.Contains(v.CustomerId))
+                .ToListAsync();
+
+            return bookings.Select(b => {
+                var vehicle = vehicles.FirstOrDefault(v => v.CustomerId == b.CustomerId && v.VehicleTypeId == b.VehicleTypeId);
+                string dbVehicleInfo = vehicle != null ? $"{vehicle.VehicleModel} • {vehicle.LicensePlate}" : "";
+                return BuildBookingResponse(b, -1, dbVehicleInfo);
+            });
         }
         
         public async Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus)
@@ -376,13 +478,48 @@ namespace LunaWash.BLL.Services
                         customerProfile.MembershipTierId = eligibleTier.Id;
                     }
                 }
+
+                // Gửi email thông báo hoàn thành
+                var user = await _context.Users.FindAsync(booking.CustomerId);
+                if (user != null && !string.IsNullOrEmpty(user.Email))
+                {
+                    await _context.Entry(booking).Reference(b => b.Branch).LoadAsync();
+                    string branchName = booking.Branch?.BranchName ?? "LunaWash";
+                    
+                    int displayPoints = totalPrice > 0 ? (int)(totalPrice * 0.05) : 0;
+
+                    string emailBody = $@"
+                        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e1e1e1; border-radius: 10px;'>
+                            <div style='text-align: center; margin-bottom: 20px;'>
+                                <h2 style='color: #10B981; margin: 0;'>LunaWash</h2>
+                                <p style='color: #6B7280; font-size: 14px; margin: 5px 0;'>Cảm ơn bạn đã trải nghiệm dịch vụ</p>
+                            </div>
+                            
+                            <h3 style='color: #1F2937;'>Dịch vụ đã hoàn thành</h3>
+                            <p>Xin chào <strong>{user.FullName}</strong>,</p>
+                            <p>Xe của bạn đã được chăm sóc xong tại chi nhánh <strong>{branchName}</strong>. Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ tại LunaWash!</p>
+                            
+                            <div style='background-color: #F3F4F6; padding: 15px; border-radius: 8px; margin: 20px 0;'>
+                                <p style='margin: 0;'><strong>Mã đặt lịch:</strong> {booking.Id}</p>
+                                <p style='margin: 5px 0 0 0;'><strong>Tổng tiền:</strong> {totalPrice:N0} VNĐ</p>
+                                {(displayPoints > 0 ? $"<p style='margin: 5px 0 0 0; color: #F59E0B;'><strong>Điểm thưởng tích lũy:</strong> +{displayPoints} pt</p>" : "")}
+                            </div>
+                            
+                            <p style='color: #6B7280; font-size: 14px;'>Rất mong được phục vụ bạn trong những lần tiếp theo. Chúc bạn có một ngày vui vẻ cùng xế yêu sáng bóng!</p>
+                            
+                            <hr style='border: none; border-top: 1px solid #e1e1e1; margin: 30px 0;' />
+                            <p style='color: #9CA3AF; font-size: 12px; text-align: center;'>Đây là email tự động, vui lòng không trả lời.</p>
+                        </div>";
+
+                    _ = _emailService.SendEmailAsync(user.Email, $"Cảm ơn bạn đã sử dụng dịch vụ #{booking.Id} - LunaWash", emailBody);
+                }
             }
             
             await _context.SaveChangesAsync();
             return true;
         }
 
-        private BookingResponseDTO BuildBookingResponse(Booking b)
+        private BookingResponseDTO BuildBookingResponse(Booking b, double rating = -1, string dbVehicleInfo = "")
         {
             string packageName = "Gói Cơ Bản";
             string services = "";
@@ -390,7 +527,7 @@ namespace LunaWash.BLL.Services
             string totalPrice = "0đ";
             string paymentMethod = "tien-mat";
             string timeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}";
-            string vehicleInfo = "";
+            string vehicleInfo = dbVehicleInfo;
 
             if (!string.IsNullOrEmpty(b.Notes))
             {
@@ -402,7 +539,10 @@ namespace LunaWash.BLL.Services
                     if (doc.RootElement.TryGetProperty("extras", out var ext) && ext.ValueKind != JsonValueKind.Null) extras = ext.GetString() ?? "";
                     if (doc.RootElement.TryGetProperty("totalPrice", out var price)) totalPrice = string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", price.GetInt32());
                     if (doc.RootElement.TryGetProperty("paymentMethod", out var pm)) paymentMethod = pm.GetString() ?? paymentMethod;
-                    if (doc.RootElement.TryGetProperty("vehicleInfo", out var vi)) vehicleInfo = vi.GetString() ?? "";
+                    if (doc.RootElement.TryGetProperty("vehicleInfo", out var vi)) {
+                        var val = vi.GetString();
+                        if (!string.IsNullOrEmpty(val)) vehicleInfo = val;
+                    }
                 }
                 catch { }
             }
@@ -412,7 +552,7 @@ namespace LunaWash.BLL.Services
                 Id = b.Id,
                 PackageName = packageName,
                 Services = services,
-                VehicleInfo = vehicleInfo,
+                VehicleInfo = string.IsNullOrEmpty(vehicleInfo) ? "Xe khách hàng" : vehicleInfo,
                 Extras = extras,
                 BranchInfo = b.Branch?.BranchName ?? b.BranchId,
                 SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
@@ -424,7 +564,8 @@ namespace LunaWash.BLL.Services
                          "Sắp đến",
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
-                CheckoutTime = b.CheckoutTime
+                CheckoutTime = b.CheckoutTime,
+                Rating = rating != -1 ? rating : null
             };
         }
 
