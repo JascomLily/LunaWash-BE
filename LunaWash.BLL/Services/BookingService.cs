@@ -104,7 +104,44 @@ namespace LunaWash.BLL.Services
                 string services = "Rửa sạch ngoại thất, làm khô tự động và xịt bóng lốp.";
                 int basePrice = 150000;
 
-                if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                // 1. Kiểm tra nếu có chọn Gói dịch vụ (ServicePackage) động
+                if (!string.IsNullOrEmpty(dto.PackageId))
+                {
+                    var package = await _context.ServicePackages
+                        .Include(p => p.PackageServices)
+                        .ThenInclude(ps => ps.WashService)
+                        .FirstOrDefaultAsync(p => p.Id == dto.PackageId && p.IsActive && !p.IsDeleted);
+
+                    if (package != null)
+                    {
+                        packageName = package.Name;
+                        basePrice = (int)package.Price;
+                        
+                        // Lấy danh sách tên dịch vụ trong gói
+                        var packageServicesList = package.PackageServices.Select(ps => ps.WashService.ServiceName).ToList();
+                        services = string.Join(", ", packageServicesList);
+
+                        // Nếu có thêm dịch vụ phụ ngoài gói (ServicePriceIds)
+                        if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                        {
+                            // Lấy các dịch vụ phụ (không nằm trong gói)
+                            var packageServiceIds = package.PackageServices.Select(ps => ps.ServiceId).ToList();
+                            var extraServicePrices = await _context.ServicePrices
+                                .Include(sp => sp.Service)
+                                .Where(sp => dto.ServicePriceIds.Contains(sp.Id) && !packageServiceIds.Contains(sp.ServiceId))
+                                .ToListAsync();
+
+                            if (extraServicePrices.Any())
+                            {
+                                basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
+                                var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
+                                services += " + " + string.Join(", ", extraServiceNames);
+                            }
+                        }
+                    }
+                }
+                // 2. Nếu không chọn gói động, tính theo danh sách dịch vụ truyền thống
+                else if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
                 {
                     var servicePrices = await _context.ServicePrices
                         .Include(sp => sp.Service)

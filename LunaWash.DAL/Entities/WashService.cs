@@ -27,6 +27,8 @@ public partial class WashService
 
     public virtual ICollection<ServicePrice> ServicePrices { get; set; } = new List<ServicePrice>();
 
+    public virtual ICollection<PackageService> PackageServices { get; set; } = new List<PackageService>();
+
     public virtual ICollection<ServiceFeature> ServiceFeatures { get; set; } = new List<ServiceFeature>();
 
     public virtual ICollection<BookingService> BookingServices { get; set; } = new List<BookingService>();
