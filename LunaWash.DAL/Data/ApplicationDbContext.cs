@@ -58,6 +58,9 @@ public partial class ApplicationDbContext : DbContext
     
     public virtual DbSet<MaintenanceTask> MaintenanceTasks { get; set; }
 
+    public virtual DbSet<BookingService> BookingServices { get; set; }
+
+    public virtual DbSet<ServiceFeature> ServiceFeatures { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Booking>(entity =>
@@ -288,8 +291,42 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ServiceType).HasMaxLength(50).HasDefaultValue("Package");
+            entity.Property(e => e.IconName).HasMaxLength(100);
+            entity.Property(e => e.IsPopular).HasDefaultValue(false);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.ServiceName).HasMaxLength(150);
+        });
+
+        modelBuilder.Entity<BookingService>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.BookingId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.WashServiceId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.PriceAtTime).HasColumnType("decimal(18, 2)");
+
+            entity.HasOne(d => d.Booking).WithMany(p => p.BookingServices)
+                .HasForeignKey(d => d.BookingId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.WashService).WithMany(p => p.BookingServices)
+                .HasForeignKey(d => d.WashServiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull);
+        });
+
+        modelBuilder.Entity<ServiceFeature>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.WashServiceId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.FeatureText).HasMaxLength(250);
+
+            entity.HasOne(d => d.WashService).WithMany(p => p.ServiceFeatures)
+                .HasForeignKey(d => d.WashServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<WashSlot>(entity =>
