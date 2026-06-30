@@ -103,6 +103,7 @@ namespace LunaWash.BLL.Services
                 string packageName = "Gói Cơ Bản";
                 string services = "Rửa sạch ngoại thất, làm khô tự động và xịt bóng lốp.";
                 int basePrice = 150000;
+                string extrasString = "";
 
                 // 1. Kiểm tra nếu có chọn Gói dịch vụ (ServicePackage) động
                 if (!string.IsNullOrEmpty(dto.PackageId))
@@ -135,12 +136,13 @@ namespace LunaWash.BLL.Services
                             {
                                 basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
                                 var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
-                                services += " + " + string.Join(", ", extraServiceNames);
+                                extrasString = string.Join(", ", extraServiceNames);
+                                services += " + " + extrasString;
                             }
                         }
                     }
                 }
-                // 2. Nếu không chọn gói động, tính theo danh sách dịch vụ truyền thống
+                // 2. Xử lý logic mới với ServicePriceIds linh động (Dynamic Services)
                 else if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
                 {
                     var servicePrices = await _context.ServicePrices
@@ -151,11 +153,34 @@ namespace LunaWash.BLL.Services
                     if (servicePrices.Any())
                     {
                         basePrice = (int)servicePrices.Sum(sp => sp.Price);
-                        services = string.Join(", ", servicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ"));
-                        if (dto.ServicePriceIds.Any(id => id.Contains("BSC"))) packageName = "Gói Cơ Bản";
-                        else if (dto.ServicePriceIds.Any(id => id.Contains("ADV"))) packageName = "Gói Nâng Cao";
-                        else if (dto.ServicePriceIds.Any(id => id.Contains("PRE"))) packageName = "Gói Cao Cấp";
-                        else packageName = "Gói Tùy Chọn";
+
+                        // Phân tách Gói (Package) và Dịch vụ phụ (AddOn)
+                        var packageServicePrice = servicePrices.FirstOrDefault(sp => sp.Service != null && sp.Service.ServiceType == "Package");
+                        
+                        if (packageServicePrice != null)
+                        {
+                            packageName = packageServicePrice.Service!.ServiceName;
+                            services = !string.IsNullOrEmpty(packageServicePrice.Service.Description) 
+                                ? packageServicePrice.Service.Description 
+                                : packageServicePrice.Service.ServiceName;
+                        }
+                        else
+                        {
+                            packageName = "Gói Tùy Chọn";
+                            var mainServices = servicePrices
+                                .Where(sp => sp.Service != null && sp.Service.ServiceType != "AddOn")
+                                .Select(sp => sp.Service!.ServiceName)
+                                .ToList();
+                            services = mainServices.Any() ? string.Join(", ", mainServices) : "Dịch vụ tùy chọn";
+                        }
+
+                        // Xử lý các dịch vụ phụ (AddOn)
+                        var extraServiceNames = servicePrices
+                            .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
+                            .Select(sp => sp.Service!.ServiceName)
+                            .ToList();
+                        
+                        extrasString = string.Join(", ", extraServiceNames);
                     }
                 }
 
@@ -173,7 +198,7 @@ namespace LunaWash.BLL.Services
                     packageName = packageName,
                     services = services,
                     totalPrice = totalPrice,
-                    extras = dto.Notes,
+                    extras = extrasString,
                     paymentMethod = paymentMethod,
                     timeRange = $"{startTime:HH:mm} - {endTime:HH:mm}",
                     displayDate = bookingDate.ToString("dd/MM/yyyy"),
