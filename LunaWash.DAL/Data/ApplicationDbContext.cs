@@ -65,6 +65,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<ServiceFeature> ServiceFeatures { get; set; }
 
+    public virtual DbSet<Promotion> Promotions { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Booking>(entity =>
