@@ -187,6 +187,19 @@ namespace LunaWash.BLL.Services
                 string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay_pending" : "tien-mat";
                 int totalPrice = basePrice;
 
+                if (!string.IsNullOrWhiteSpace(dto.PromoCode))
+                {
+                    var promotion = await _context.Promotions.FirstOrDefaultAsync(p => p.Code.ToUpper() == dto.PromoCode.ToUpper() && p.IsActive && !p.IsDeleted);
+                    if (promotion != null && DateTime.UtcNow >= promotion.StartDate && DateTime.UtcNow <= promotion.EndDate)
+                    {
+                        if (!promotion.MaxUsage.HasValue || promotion.CurrentUsage < promotion.MaxUsage.Value)
+                        {
+                            totalPrice -= (int)(totalPrice * (promotion.DiscountPercent / 100.0));
+                            promotion.CurrentUsage++;
+                        }
+                    }
+                }
+
                 // Code xử lý slot lấy từ nhánh main
                 var washSlot = !string.IsNullOrEmpty(dto.WashSlotId)
                     ? await _context.WashSlots.FirstOrDefaultAsync(ws => ws.Id == dto.WashSlotId && ws.BranchId == dto.BranchId)
