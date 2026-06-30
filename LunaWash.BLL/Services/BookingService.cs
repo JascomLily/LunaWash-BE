@@ -103,8 +103,47 @@ namespace LunaWash.BLL.Services
                 string packageName = "Gói Cơ Bản";
                 string services = "Rửa sạch ngoại thất, làm khô tự động và xịt bóng lốp.";
                 int basePrice = 150000;
+                string extrasString = "";
 
-                if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                // 1. Kiểm tra nếu có chọn Gói dịch vụ (ServicePackage) động
+                if (!string.IsNullOrEmpty(dto.PackageId))
+                {
+                    var package = await _context.ServicePackages
+                        .Include(p => p.PackageServices)
+                        .ThenInclude(ps => ps.WashService)
+                        .FirstOrDefaultAsync(p => p.Id == dto.PackageId && p.IsActive && !p.IsDeleted);
+
+                    if (package != null)
+                    {
+                        packageName = package.Name;
+                        basePrice = (int)package.Price;
+                        
+                        // Lấy danh sách tên dịch vụ trong gói
+                        var packageServicesList = package.PackageServices.Select(ps => ps.WashService.ServiceName).ToList();
+                        services = string.Join(", ", packageServicesList);
+
+                        // Nếu có thêm dịch vụ phụ ngoài gói (ServicePriceIds)
+                        if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                        {
+                            // Lấy các dịch vụ phụ (không nằm trong gói)
+                            var packageServiceIds = package.PackageServices.Select(ps => ps.ServiceId).ToList();
+                            var extraServicePrices = await _context.ServicePrices
+                                .Include(sp => sp.Service)
+                                .Where(sp => dto.ServicePriceIds.Contains(sp.Id) && !packageServiceIds.Contains(sp.ServiceId))
+                                .ToListAsync();
+
+                            if (extraServicePrices.Any())
+                            {
+                                basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
+                                var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
+                                extrasString = string.Join(", ", extraServiceNames);
+                                services += " + " + extrasString;
+                            }
+                        }
+                    }
+                }
+                // 2. Xử lý logic mới với ServicePriceIds linh động (Dynamic Services)
+                else if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
                 {
                     var servicePrices = await _context.ServicePrices
                         .Include(sp => sp.Service)
@@ -114,9 +153,34 @@ namespace LunaWash.BLL.Services
                     if (servicePrices.Any())
                     {
                         basePrice = (int)servicePrices.Sum(sp => sp.Price);
-                        services = string.Join(", ", servicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ"));
-                        var pkgPrice = servicePrices.FirstOrDefault(sp => sp.Service != null && sp.Service.ServiceType == "Package");
-                        packageName = pkgPrice != null ? pkgPrice.Service.ServiceName : "Gói Tùy Chọn";
+
+                        // Phân tách Gói (Package) và Dịch vụ phụ (AddOn)
+                        var packageServicePrice = servicePrices.FirstOrDefault(sp => sp.Service != null && sp.Service.ServiceType == "Package");
+                        
+                        if (packageServicePrice != null)
+                        {
+                            packageName = packageServicePrice.Service!.ServiceName;
+                            services = !string.IsNullOrEmpty(packageServicePrice.Service.Description) 
+                                ? packageServicePrice.Service.Description 
+                                : packageServicePrice.Service.ServiceName;
+                        }
+                        else
+                        {
+                            packageName = "Gói Tùy Chọn";
+                            var mainServices = servicePrices
+                                .Where(sp => sp.Service != null && sp.Service.ServiceType != "AddOn")
+                                .Select(sp => sp.Service!.ServiceName)
+                                .ToList();
+                            services = mainServices.Any() ? string.Join(", ", mainServices) : "Dịch vụ tùy chọn";
+                        }
+
+                        // Xử lý các dịch vụ phụ (AddOn)
+                        var extraServiceNames = servicePrices
+                            .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
+                            .Select(sp => sp.Service!.ServiceName)
+                            .ToList();
+                        
+                        extrasString = string.Join(", ", extraServiceNames);
                     }
                 }
 
@@ -134,7 +198,7 @@ namespace LunaWash.BLL.Services
                     packageName = packageName,
                     services = services,
                     totalPrice = totalPrice,
-                    extras = dto.Notes,
+                    extras = extrasString,
                     paymentMethod = paymentMethod,
                     timeRange = $"{startTime:HH:mm} - {endTime:HH:mm}",
                     displayDate = bookingDate.ToString("dd/MM/yyyy"),
