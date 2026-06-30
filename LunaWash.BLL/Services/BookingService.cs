@@ -115,10 +115,8 @@ namespace LunaWash.BLL.Services
                     {
                         basePrice = (int)servicePrices.Sum(sp => sp.Price);
                         services = string.Join(", ", servicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ"));
-                        if (dto.ServicePriceIds.Any(id => id.Contains("BSC"))) packageName = "Gói Cơ Bản";
-                        else if (dto.ServicePriceIds.Any(id => id.Contains("ADV"))) packageName = "Gói Nâng Cao";
-                        else if (dto.ServicePriceIds.Any(id => id.Contains("PRE"))) packageName = "Gói Cao Cấp";
-                        else packageName = "Gói Tùy Chọn";
+                        var pkgPrice = servicePrices.FirstOrDefault(sp => sp.Service != null && sp.Service.ServiceType == "Package");
+                        packageName = pkgPrice != null ? pkgPrice.Service.ServiceName : "Gói Tùy Chọn";
                     }
                 }
 
