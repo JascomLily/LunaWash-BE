@@ -377,6 +377,8 @@ public partial class ApplicationDbContext : DbContext
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Attendances_Users");
+        });
+
         modelBuilder.Entity<ServicePackage>(entity =>
         {
             entity.HasKey(e => e.Id);

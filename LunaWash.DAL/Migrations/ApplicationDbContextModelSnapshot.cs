@@ -1108,8 +1108,6 @@ namespace LunaWash.DAL.Migrations
                     b.Navigation("Equipment");
                 });
 
-<<<<<<< HEAD
-=======
             modelBuilder.Entity("LunaWash.DAL.Entities.PackageService", b =>
                 {
                     b.HasOne("LunaWash.DAL.Entities.ServicePackage", "ServicePackage")
@@ -1129,7 +1127,6 @@ namespace LunaWash.DAL.Migrations
                     b.Navigation("WashService");
                 });
 
->>>>>>> 16e5c36ed467f99d88de58dfa416c638d0d0d7f5
             modelBuilder.Entity("LunaWash.DAL.Entities.PointHistory", b =>
                 {
                     b.HasOne("LunaWash.DAL.Entities.CustomerProfile", "CustomerProfile")
