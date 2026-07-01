@@ -172,7 +172,7 @@ namespace LunaWash.BLL.Services
             {
                 Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.Message);
                 Console.WriteLine(ex.StackTrace);
-                return null;
+                throw new Exception("Lỗi chi tiết: " + ex.Message + " | StackTrace: " + ex.StackTrace);
             }
         }
 

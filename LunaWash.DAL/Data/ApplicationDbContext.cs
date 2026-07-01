@@ -34,6 +34,7 @@ public partial class ApplicationDbContext : DbContext
 
 
     public virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
 
 
 

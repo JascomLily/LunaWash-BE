@@ -77,14 +77,16 @@ namespace LunaWash.API.Controllers
                 return StatusCode(500, new { message = "Server is missing Google ClientId configuration." });
             }
 
-            var result = await _authService.GoogleLoginAsync(request.Token, clientId);
-
-            if (result == null)
-            {
-                return BadRequest(new { message = "Đăng nhập Google thất bại. Token không hợp lệ." });
+            try {
+                var result = await _authService.GoogleLoginAsync(request.Token, clientId);
+                if (result == null)
+                {
+                    return BadRequest(new { message = "Đăng nhập Google thất bại. Token không hợp lệ." });
+                }
+                return Ok(result);
+            } catch (Exception ex) {
+                return BadRequest(new { message = "LỖI TỪ BE: " + ex.Message });
             }
-
-            return Ok(result);
         }
 
         public class VerifyOtpRequest

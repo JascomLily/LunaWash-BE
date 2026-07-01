@@ -12,6 +12,8 @@ namespace LunaWash.BLL.DTOs
         public string RoleName { get; set; } = null!;
         public string? BranchId { get; set; }
         public bool IsActive { get; set; }
+        public decimal Salary { get; set; }
+        public int LeaveDays { get; set; }
     }
 
     public class EmployeeCreateDto
@@ -21,6 +23,8 @@ namespace LunaWash.BLL.DTOs
         public string PhoneNumber { get; set; } = null!;
         public string RoleId { get; set; } = null!; // "Staff", "TechnicalStaff"
         public string BranchId { get; set; } = null!;
+        public decimal Salary { get; set; }
+        public int LeaveDays { get; set; }
     }
 
     public class AttendanceResponseDto
