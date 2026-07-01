@@ -45,6 +45,12 @@ namespace LunaWash.BLL.Services
                 return null;
             }
 
+            // Chặn đăng nhập bằng form thường nếu tài khoản tạo bằng Google
+            if (user.Password == "GOOGLE_OAUTH_LOGIN")
+            {
+                throw new UnauthorizedAccessException("GoogleLoginRequired");
+            }
+
             if (user.Password != loginDto.Password)
             {
                 return null;
