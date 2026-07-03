@@ -351,7 +351,7 @@ namespace LunaWash.BLL.Services
         {
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.CustomerId == userId && !b.IsDeleted && b.Status != "Pending")
+                .Where(b => b.CustomerId == userId && b.Status != "Pending")
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -443,7 +443,8 @@ namespace LunaWash.BLL.Services
 
             if (booking == null) return false;
 
-            _context.Bookings.Remove(booking);
+            booking.IsDeleted = true;
+            booking.Status = "Cancelled";
             await _context.SaveChangesAsync();
             return true;
         }
