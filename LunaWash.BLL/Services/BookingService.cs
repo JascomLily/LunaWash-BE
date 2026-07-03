@@ -561,10 +561,10 @@ namespace LunaWash.BLL.Services
                     catch { /* Bỏ qua nếu lỗi parse JSON */ }
                 }
 
-                // Nếu không có pointsRewarded trong JSON (đơn cũ), dùng fallback 5% tổng tiền
+                // Nếu không có pointsRewarded trong JSON (đơn cũ), dùng fallback cũ
                 if (earnedPoints <= 0 && totalPrice > 0)
                 {
-                    earnedPoints = (int)(totalPrice * 0.05);
+                    earnedPoints = (int)(totalPrice / 10000);
                 }
 
                 if (earnedPoints > 0)
