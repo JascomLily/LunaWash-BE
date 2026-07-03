@@ -117,6 +117,7 @@ namespace LunaWash.BLL.Services
                         FullName = payload.Name ?? "Google User",
                         Email = userEmail,
                         RoleId = customerRole.Id,
+                        Role = customerRole,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         IsDeleted = false,
@@ -145,7 +146,7 @@ namespace LunaWash.BLL.Services
 
                 // Retrieve Tier Name for Response
                 string tierName = "Đồng";
-                if (existingUser.Role.RoleName == "Customer")
+                if (existingUser.Role?.RoleName == "Customer")
                 {
                     var profile = await _context.CustomerProfiles
                         .Include(cp => cp.MembershipTier)

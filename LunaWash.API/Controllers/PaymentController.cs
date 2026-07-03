@@ -102,6 +102,7 @@ namespace LunaWash.API.Controllers
                     // Thanh toán thành công -> Cập nhật trạng thái Booking
                     if (booking != null)
                     {
+                        booking.Status = "Confirmed";
                         if (!string.IsNullOrEmpty(booking.Notes))
                         {
                             try

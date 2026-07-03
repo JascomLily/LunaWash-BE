@@ -83,6 +83,18 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Hủy lịch đặt thành công." });
         }
 
+        [HttpDelete("hard-delete/{id}")]
+        public async Task<IActionResult> HardDeleteBooking(string id)
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var result = await _bookingService.HardDeleteBookingAsync(userId, id);
+            if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt để xóa." });
+
+            return Ok(new { message = "Đã xóa bỏ lịch đặt hoàn toàn." });
+        }
+
         [HttpGet("available-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string branchId, [FromQuery] string date)
