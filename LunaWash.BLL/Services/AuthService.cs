@@ -176,8 +176,9 @@ namespace LunaWash.BLL.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.ToString());
-                return null;
+                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new Exception("Lỗi chi tiết: " + ex.Message + " | StackTrace: " + ex.StackTrace);
             }
         }
 

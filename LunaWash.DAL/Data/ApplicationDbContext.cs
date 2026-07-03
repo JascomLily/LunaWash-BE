@@ -17,6 +17,7 @@ public partial class ApplicationDbContext : DbContext
     }
 
     public virtual DbSet<Booking> Bookings { get; set; }
+    public virtual DbSet<Attendance> Attendances { get; set; }
 
     public virtual DbSet<Branch> Branches { get; set; }
 
@@ -33,6 +34,7 @@ public partial class ApplicationDbContext : DbContext
 
 
     public virtual DbSet<Role> Roles { get; set; }
+    public virtual DbSet<StaffProfile> StaffProfiles { get; set; }
 
 
 
@@ -354,6 +356,27 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Branch).WithMany(p => p.WashSlots)
                 .HasForeignKey(d => d.BranchId)
                 .HasConstraintName("FK_WashSlots_Branches");
+        });
+
+        modelBuilder.Entity<Attendance>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_Attendances");
+
+            entity.Property(e => e.Id)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.UserId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.BranchId)
+                .HasMaxLength(50)
+                .IsUnicode(false);
+            entity.Property(e => e.Status).HasMaxLength(50);
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Attendances_Users");
         });
 
         modelBuilder.Entity<ServicePackage>(entity =>
