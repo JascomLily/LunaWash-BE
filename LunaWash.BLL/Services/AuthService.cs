@@ -146,7 +146,7 @@ namespace LunaWash.BLL.Services
 
                 // Retrieve Tier Name for Response
                 string tierName = "Đồng";
-                if (existingUser.Role.RoleName == "Customer")
+                if (existingUser.Role?.RoleName == "Customer")
                 {
                     var profile = await _context.CustomerProfiles
                         .Include(cp => cp.MembershipTier)

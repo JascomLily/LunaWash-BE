@@ -184,7 +184,22 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay_pending" : "tien-mat";
+                string parsedPaymentMethod = "tien-mat";
+                if (dto.Notes != null)
+                {
+                    try
+                    {
+                        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                        var doc = JsonDocument.Parse(dto.Notes);
+                        if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
+                        {
+                            parsedPaymentMethod = pm.GetString() ?? "tien-mat";
+                        }
+                    }
+                    catch { }
+                }
+
+                string paymentMethod = parsedPaymentMethod;
                 int totalPrice = basePrice;
 
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
@@ -226,7 +241,7 @@ namespace LunaWash.BLL.Services
                     VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                     ScheduledStartTime = startTime,
                     ScheduledEndTime = endTime,
-                    Status = "Confirmed",
+                    Status = paymentMethod == "vnpay" ? "Pending" : "Confirmed",
                     WashSlotId = dbSlotId,
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
@@ -245,7 +260,7 @@ namespace LunaWash.BLL.Services
 
                 // Gửi email xác nhận đặt lịch
                 var user = await _context.Users.FindAsync(userId);
-                if (user != null && !string.IsNullOrEmpty(user.Email))
+                if (user != null && !string.IsNullOrEmpty(user.Email) && paymentMethod != "vnpay")
                 {
                     string paymentStr = paymentMethod == "vnpay" ? "Thanh toán qua VNPay" : "Thanh toán trực tiếp";
                     string emailBody = $@"
@@ -336,7 +351,7 @@ namespace LunaWash.BLL.Services
         {
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.CustomerId == userId)
+                .Where(b => b.CustomerId == userId && b.Status != "Pending")
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -418,6 +433,19 @@ namespace LunaWash.BLL.Services
                 _ = _emailService.SendEmailAsync(user.Email, $"Thông báo Hủy Lịch #{booking.Id} - LunaWash", emailBody);
             }
 
+            return true;
+        }
+
+        public async Task<bool> HardDeleteBookingAsync(string userId, string bookingId)
+        {
+            var booking = await _context.Bookings
+                .FirstOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == userId);
+
+            if (booking == null) return false;
+
+            booking.IsDeleted = true;
+            booking.Status = "Cancelled";
+            await _context.SaveChangesAsync();
             return true;
         }
 
