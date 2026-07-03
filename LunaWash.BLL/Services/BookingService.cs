@@ -221,11 +221,21 @@ namespace LunaWash.BLL.Services
                     : await _context.WashSlots.FirstOrDefaultAsync(ws => ws.BranchId == dto.BranchId);
                 string dbSlotId = washSlot?.Id ?? availableSlot?.Id ?? "BRN-BT-01-WS-01"; 
 
+                // Tính tổng điểm tích lũy từ các dịch vụ đã chọn
+                int totalPointsRewarded = 0;
+                if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                {
+                    totalPointsRewarded = await _context.ServicePrices
+                        .Where(sp => dto.ServicePriceIds.Contains(sp.Id))
+                        .SumAsync(sp => sp.PointsRewarded);
+                }
+
                 // Khởi tạo notesObj từ nhánh main
                 var notesObj = new {
                     packageName = packageName,
                     services = services,
                     totalPrice = totalPrice,
+                    pointsRewarded = totalPointsRewarded,
                     extras = extrasString,
                     paymentMethod = paymentMethod,
                     timeRange = $"{startTime:HH:mm} - {endTime:HH:mm}",
@@ -315,8 +325,20 @@ namespace LunaWash.BLL.Services
 
             booking.Status = "Completed"; // Hoặc trạng thái tương đương của dự án
 
-            // ĐIỀU KIỆN TÍCH ĐIỂM: Ví dụ mỗi 10.000đ đơn hàng được tính là 1 điểm
-            int earnedPoints = (int)(booking.TotalPrice / 10000);
+            // Lấy điểm thưởng từ cột Notes (Lưu JSON)
+            int earnedPoints = (int)(booking.TotalPrice / 10000); // Fallback cũ
+            if (!string.IsNullOrEmpty(booking.Notes))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(booking.Notes);
+                    if (doc.RootElement.TryGetProperty("pointsRewarded", out var pointsElement))
+                    {
+                        earnedPoints = pointsElement.GetInt32();
+                    }
+                }
+                catch { /* Bỏ qua nếu lỗi parse JSON */ }
+            }
 
             if (earnedPoints > 0)
             {
@@ -519,8 +541,9 @@ namespace LunaWash.BLL.Services
                 }
 
                 int totalPrice = 0;
+                int earnedPoints = 0;
                 
-                // Lấy tổng tiền từ cột Notes (Lưu JSON)
+                // Lấy tổng tiền và điểm thưởng từ cột Notes (Lưu JSON)
                 if (!string.IsNullOrEmpty(booking.Notes))
                 {
                     try
