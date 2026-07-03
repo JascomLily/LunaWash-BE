@@ -14,6 +14,7 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IPromotionService, PromotionService>();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHostedService<LunaWash.API.BackgroundServices.BookingCleanupService>();
 builder.Services.AddSwaggerGen();
 
 // Configure JWT Authentication
