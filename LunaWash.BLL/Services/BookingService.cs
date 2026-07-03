@@ -439,21 +439,20 @@ namespace LunaWash.BLL.Services
         public async Task<bool> HardDeleteBookingAsync(string userId, string bookingId)
         {
             var booking = await _context.Bookings
-                .Include(b => b.BookingServices)
-                .Include(b => b.ServiceReview)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == userId);
 
             if (booking == null) return false;
 
-            if (booking.ServiceReview != null)
+            // Xóa PointHistory liên quan (vì không có FK constraint)
+            var pointHistories = await _context.PointHistories
+                .Where(p => p.BookingId == bookingId)
+                .ToListAsync();
+            if (pointHistories.Any())
             {
-                _context.ServiceReviews.Remove(booking.ServiceReview);
+                _context.PointHistories.RemoveRange(pointHistories);
             }
-            if (booking.BookingServices.Any())
-            {
-                _context.BookingServices.RemoveRange(booking.BookingServices);
-            }
-            
+
+            // Xóa Booking (các bảng có FK Cascade như BookingServices/ServiceReview sẽ tự động bị xóa bởi DB, hoặc không quan trọng nếu trống)
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
             return true;
