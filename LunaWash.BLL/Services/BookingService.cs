@@ -553,15 +553,22 @@ namespace LunaWash.BLL.Services
                         {
                             totalPrice = priceElement.GetInt32();
                         }
+                        if (doc.RootElement.TryGetProperty("pointsRewarded", out var pointsElement))
+                        {
+                            earnedPoints = pointsElement.GetInt32();
+                        }
                     }
                     catch { /* Bỏ qua nếu lỗi parse JSON */ }
                 }
 
-                if (totalPrice > 0)
+                // Nếu không có pointsRewarded trong JSON (đơn cũ), dùng fallback 5% tổng tiền
+                if (earnedPoints <= 0 && totalPrice > 0)
                 {
-                    // Tính điểm: 5% giá trị hóa đơn (VD: 150.000đ -> 7.500 điểm/VND)
-                    int earnedPoints = (int)(totalPrice * 0.05);
+                    earnedPoints = (int)(totalPrice * 0.05);
+                }
 
+                if (earnedPoints > 0)
+                {
                     // Lấy Profile của khách hàng
                     var customerProfile = await _context.CustomerProfiles
                         .FirstOrDefaultAsync(cp => cp.UserId == booking.CustomerId);

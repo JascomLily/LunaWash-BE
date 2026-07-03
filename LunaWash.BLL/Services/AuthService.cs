@@ -362,11 +362,18 @@ namespace LunaWash.BLL.Services
                 }
                 // ----------------------------------------------------------------------
 
+                int accPoints = user.CustomerProfile.AccumulatedPoints;
+                string calculatedTier = "ĐỒNG";
+                
+                if (accPoints >= 5000) calculatedTier = "PLATINUM";
+                else if (accPoints >= 3000) calculatedTier = "VÀNG";
+                else if (accPoints >= 1000) calculatedTier = "BẠC";
+
                 loyaltyInfo = new LoyaltyInfoDTO
                 {
                     CurrentPoints = user.CustomerProfile.CurrentPoints,
-                    AccumulatedPoints = user.CustomerProfile.AccumulatedPoints,
-                    TierName = user.CustomerProfile.MembershipTier?.TierName ?? "Member",
+                    AccumulatedPoints = accPoints,
+                    TierName = calculatedTier,
                     DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0
                 };
             }
