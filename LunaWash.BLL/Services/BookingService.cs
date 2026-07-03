@@ -439,12 +439,22 @@ namespace LunaWash.BLL.Services
         public async Task<bool> HardDeleteBookingAsync(string userId, string bookingId)
         {
             var booking = await _context.Bookings
+                .Include(b => b.BookingServices)
+                .Include(b => b.ServiceReview)
                 .FirstOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == userId);
 
             if (booking == null) return false;
 
-            booking.IsDeleted = true;
-            booking.Status = "Cancelled";
+            if (booking.ServiceReview != null)
+            {
+                _context.ServiceReviews.Remove(booking.ServiceReview);
+            }
+            if (booking.BookingServices.Any())
+            {
+                _context.BookingServices.RemoveRange(booking.BookingServices);
+            }
+            
+            _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
             return true;
         }
