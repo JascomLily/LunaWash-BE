@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
@@ -14,6 +14,14 @@ public partial class Branch
     public string PhoneNumber { get; set; } = null!;
 
     public bool IsActive { get; set; }
+
+    public string? ImageUrl { get; set; }
+
+    public string? Description { get; set; }
+
+    public double? Latitude { get; set; }
+
+    public double? Longitude { get; set; }
 
     public DateTime CreatedAt { get; set; }
 

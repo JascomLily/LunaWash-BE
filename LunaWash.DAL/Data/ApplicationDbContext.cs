@@ -140,6 +140,7 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false);
             entity.Property(e => e.Address).HasMaxLength(250);
             entity.Property(e => e.BranchName).HasMaxLength(150);
+            entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.PhoneNumber).HasMaxLength(20);
