@@ -76,6 +76,8 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<DailyAttendance> DailyAttendances { get; set; }
 
     public virtual DbSet<ScheduleHistory> ScheduleHistories { get; set; }
+    public virtual DbSet<IncidentReport> IncidentReports { get; set; }
+    public virtual DbSet<EquipmentCheckLog> EquipmentCheckLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -486,6 +488,50 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Employee)
                 .WithMany()
                 .HasForeignKey(d => d.EmployeeId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<IncidentReport>(entity =>
+        {
+            entity.HasOne(d => d.Branch)
+                .WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Equipment)
+                .WithMany()
+                .HasForeignKey(d => d.EquipmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Reporter)
+                .WithMany()
+                .HasForeignKey(d => d.ReporterId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<EquipmentCheckLog>(entity =>
+        {
+            entity.HasOne(d => d.Branch)
+                .WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Equipment)
+                .WithMany()
+                .HasForeignKey(d => d.EquipmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(d => d.Technician)
+                .WithMany()
+                .HasForeignKey(d => d.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<MaintenanceTask>(entity =>
+        {
+            entity.HasOne(d => d.AssignedTo)
+                .WithMany()
+                .HasForeignKey(d => d.AssignedToId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
