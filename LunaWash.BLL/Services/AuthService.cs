@@ -117,6 +117,7 @@ namespace LunaWash.BLL.Services
                         FullName = payload.Name ?? "Google User",
                         Email = userEmail,
                         RoleId = customerRole.Id,
+                        Role = customerRole,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
                         IsDeleted = false,
@@ -145,7 +146,7 @@ namespace LunaWash.BLL.Services
 
                 // Retrieve Tier Name for Response
                 string tierName = "Đồng";
-                if (existingUser.Role.RoleName == "Customer")
+                if (existingUser.Role?.RoleName == "Customer")
                 {
                     var profile = await _context.CustomerProfiles
                         .Include(cp => cp.MembershipTier)
@@ -175,8 +176,9 @@ namespace LunaWash.BLL.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.ToString());
-                return null;
+                Console.WriteLine("GOOGLE LOGIN ERROR: " + ex.Message);
+                Console.WriteLine(ex.StackTrace);
+                throw new Exception("Lỗi chi tiết: " + ex.Message + " | StackTrace: " + ex.StackTrace);
             }
         }
 
@@ -360,11 +362,18 @@ namespace LunaWash.BLL.Services
                 }
                 // ----------------------------------------------------------------------
 
+                int accPoints = user.CustomerProfile.AccumulatedPoints;
+                string calculatedTier = "ĐỒNG";
+                
+                if (accPoints >= 5000) calculatedTier = "PLATINUM";
+                else if (accPoints >= 3000) calculatedTier = "VÀNG";
+                else if (accPoints >= 1000) calculatedTier = "BẠC";
+
                 loyaltyInfo = new LoyaltyInfoDTO
                 {
                     CurrentPoints = user.CustomerProfile.CurrentPoints,
-                    AccumulatedPoints = user.CustomerProfile.AccumulatedPoints,
-                    TierName = user.CustomerProfile.MembershipTier?.TierName ?? "Member",
+                    AccumulatedPoints = accPoints,
+                    TierName = calculatedTier,
                     DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0
                 };
             }

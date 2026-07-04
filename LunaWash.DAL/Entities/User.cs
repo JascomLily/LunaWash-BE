@@ -37,6 +37,8 @@ public partial class User
 
     public virtual CustomerProfile? CustomerProfile { get; set; }
 
+    public virtual StaffProfile? StaffProfile { get; set; }
+
 
 
     public virtual Role Role { get; set; } = null!;

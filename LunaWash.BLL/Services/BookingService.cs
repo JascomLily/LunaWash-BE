@@ -184,7 +184,22 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                string paymentMethod = dto.Notes != null && dto.Notes.Contains("VNPay") ? "vnpay_pending" : "tien-mat";
+                string parsedPaymentMethod = "tien-mat";
+                if (dto.Notes != null)
+                {
+                    try
+                    {
+                        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                        var doc = JsonDocument.Parse(dto.Notes);
+                        if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
+                        {
+                            parsedPaymentMethod = pm.GetString() ?? "tien-mat";
+                        }
+                    }
+                    catch { }
+                }
+
+                string paymentMethod = parsedPaymentMethod;
                 int totalPrice = basePrice;
 
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
@@ -206,11 +221,21 @@ namespace LunaWash.BLL.Services
                     : await _context.WashSlots.FirstOrDefaultAsync(ws => ws.BranchId == dto.BranchId);
                 string dbSlotId = washSlot?.Id ?? availableSlot?.Id ?? "BRN-BT-01-WS-01"; 
 
+                // Tính tổng điểm tích lũy từ các dịch vụ đã chọn
+                int totalPointsRewarded = 0;
+                if (dto.ServicePriceIds != null && dto.ServicePriceIds.Any())
+                {
+                    totalPointsRewarded = await _context.ServicePrices
+                        .Where(sp => dto.ServicePriceIds.Contains(sp.Id))
+                        .SumAsync(sp => sp.PointsRewarded);
+                }
+
                 // Khởi tạo notesObj từ nhánh main
                 var notesObj = new {
                     packageName = packageName,
                     services = services,
                     totalPrice = totalPrice,
+                    pointsRewarded = totalPointsRewarded,
                     extras = extrasString,
                     paymentMethod = paymentMethod,
                     timeRange = $"{startTime:HH:mm} - {endTime:HH:mm}",
@@ -226,7 +251,7 @@ namespace LunaWash.BLL.Services
                     VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                     ScheduledStartTime = startTime,
                     ScheduledEndTime = endTime,
-                    Status = "Confirmed",
+                    Status = paymentMethod == "vnpay" ? "Pending" : "Confirmed",
                     WashSlotId = dbSlotId,
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
@@ -245,7 +270,7 @@ namespace LunaWash.BLL.Services
 
                 // Gửi email xác nhận đặt lịch
                 var user = await _context.Users.FindAsync(userId);
-                if (user != null && !string.IsNullOrEmpty(user.Email))
+                if (user != null && !string.IsNullOrEmpty(user.Email) && paymentMethod != "vnpay")
                 {
                     string paymentStr = paymentMethod == "vnpay" ? "Thanh toán qua VNPay" : "Thanh toán trực tiếp";
                     string emailBody = $@"
@@ -300,8 +325,20 @@ namespace LunaWash.BLL.Services
 
             booking.Status = "Completed"; // Hoặc trạng thái tương đương của dự án
 
-            // ĐIỀU KIỆN TÍCH ĐIỂM: Ví dụ mỗi 10.000đ đơn hàng được tính là 1 điểm
-            int earnedPoints = (int)(booking.TotalPrice / 10000);
+            // Lấy điểm thưởng từ cột Notes (Lưu JSON)
+            int earnedPoints = (int)(booking.TotalPrice / 10000); // Fallback cũ
+            if (!string.IsNullOrEmpty(booking.Notes))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(booking.Notes);
+                    if (doc.RootElement.TryGetProperty("pointsRewarded", out var pointsElement))
+                    {
+                        earnedPoints = pointsElement.GetInt32();
+                    }
+                }
+                catch { /* Bỏ qua nếu lỗi parse JSON */ }
+            }
 
             if (earnedPoints > 0)
             {
@@ -336,7 +373,7 @@ namespace LunaWash.BLL.Services
         {
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.CustomerId == userId)
+                .Where(b => b.CustomerId == userId && b.Status != "Pending")
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -421,6 +458,28 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        public async Task<bool> HardDeleteBookingAsync(string userId, string bookingId)
+        {
+            var booking = await _context.Bookings
+                .FirstOrDefaultAsync(b => b.Id == bookingId && b.CustomerId == userId);
+
+            if (booking == null) return false;
+
+            // Xóa PointHistory liên quan (vì không có FK constraint)
+            var pointHistories = await _context.PointHistories
+                .Where(p => p.BookingId == bookingId)
+                .ToListAsync();
+            if (pointHistories.Any())
+            {
+                _context.PointHistories.RemoveRange(pointHistories);
+            }
+
+            // Xóa Booking (các bảng có FK Cascade như BookingServices/ServiceReview sẽ tự động bị xóa bởi DB, hoặc không quan trọng nếu trống)
+            _context.Bookings.Remove(booking);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)
         {
             DateOnly targetDate;
@@ -436,7 +495,8 @@ namespace LunaWash.BLL.Services
             var bookings = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == targetDate 
-                         && !b.IsDeleted)
+                         && !b.IsDeleted
+                         && b.Status != "Pending")
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -481,8 +541,9 @@ namespace LunaWash.BLL.Services
                 }
 
                 int totalPrice = 0;
+                int earnedPoints = 0;
                 
-                // Lấy tổng tiền từ cột Notes (Lưu JSON)
+                // Lấy tổng tiền và điểm thưởng từ cột Notes (Lưu JSON)
                 if (!string.IsNullOrEmpty(booking.Notes))
                 {
                     try
@@ -492,15 +553,22 @@ namespace LunaWash.BLL.Services
                         {
                             totalPrice = priceElement.GetInt32();
                         }
+                        if (doc.RootElement.TryGetProperty("pointsRewarded", out var pointsElement))
+                        {
+                            earnedPoints = pointsElement.GetInt32();
+                        }
                     }
                     catch { /* Bỏ qua nếu lỗi parse JSON */ }
                 }
 
-                if (totalPrice > 0)
+                // Nếu không có pointsRewarded trong JSON (đơn cũ), dùng fallback cũ
+                if (earnedPoints <= 0 && totalPrice > 0)
                 {
-                    // Tính điểm: 5% giá trị hóa đơn (VD: 150.000đ -> 7.500 điểm/VND)
-                    int earnedPoints = (int)(totalPrice * 0.05);
+                    earnedPoints = (int)(totalPrice / 10000);
+                }
 
+                if (earnedPoints > 0)
+                {
                     // Lấy Profile của khách hàng
                     var customerProfile = await _context.CustomerProfiles
                         .FirstOrDefaultAsync(cp => cp.UserId == booking.CustomerId);
