@@ -29,6 +29,10 @@ public partial class User
 
     public bool IsDeleted { get; set; }
 
+    public decimal? Salary { get; set; }
+
+    public int? LeaveDays { get; set; }
+
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
     public virtual CustomerProfile? CustomerProfile { get; set; }
