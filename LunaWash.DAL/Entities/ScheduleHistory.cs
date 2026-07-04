@@ -2,7 +2,7 @@ using System;
 
 namespace LunaWash.DAL.Entities
 {
-    public class StaffScheduleHistory
+    public class ScheduleHistory
     {
         public string Id { get; set; } = null!;
         public string BranchId { get; set; } = null!;

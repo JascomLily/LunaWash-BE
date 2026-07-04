@@ -69,11 +69,11 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Banner> Banners { get; set; }
 
-    public virtual DbSet<StaffShiftTemplate> StaffShiftTemplates { get; set; }
+    public virtual DbSet<EmployeeScheduleTemplate> EmployeeScheduleTemplates { get; set; }
 
-    public virtual DbSet<Attendance> Attendances { get; set; }
+    public virtual DbSet<DailyAttendance> DailyAttendances { get; set; }
 
-    public virtual DbSet<StaffScheduleHistory> StaffScheduleHistories { get; set; }
+    public virtual DbSet<ScheduleHistory> ScheduleHistories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -404,7 +404,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
         });
 
-        modelBuilder.Entity<StaffShiftTemplate>(entity =>
+        modelBuilder.Entity<EmployeeScheduleTemplate>(entity =>
         {
             entity.ToTable("EmployeeScheduleTemplates");
             entity.HasKey(e => e.Id);
@@ -420,7 +420,7 @@ public partial class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<Attendance>(entity =>
+        modelBuilder.Entity<DailyAttendance>(entity =>
         {
             entity.ToTable("DailyAttendances");
             entity.HasKey(e => e.Id);
@@ -436,7 +436,7 @@ public partial class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        modelBuilder.Entity<StaffScheduleHistory>(entity =>
+        modelBuilder.Entity<ScheduleHistory>(entity =>
         {
             entity.ToTable("ScheduleHistories");
             entity.HasKey(e => e.Id);
