@@ -220,5 +220,35 @@ namespace LunaWash.BLL.Services
                 NewValue = h.NewValue
             }).ToList();
         }
+
+        public async Task<bool> UpdateEmployeeSalaryAsync(string employeeId, decimal salary)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
+
+            user.Salary = salary;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateEmployeeLeaveDaysAsync(string employeeId, int leaveDays)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
+
+            user.LeaveDays = leaveDays;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ToggleEmployeeActiveAsync(string employeeId, bool isActive)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
+
+            user.IsActive = isActive;
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

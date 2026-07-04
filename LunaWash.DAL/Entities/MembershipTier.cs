@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace LunaWash.DAL.Entities;
@@ -16,6 +16,10 @@ public partial class MembershipTier
     public int PriorityLevel { get; set; }
 
     public decimal DiscountPercent { get; set; }
+
+    public int KeepPoints { get; set; } = 0;
+
+    public int AdvanceBookingDays { get; set; } = 7;
 
     public DateTime CreatedAt { get; set; }
 

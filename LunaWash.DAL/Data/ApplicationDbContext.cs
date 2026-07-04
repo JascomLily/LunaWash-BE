@@ -78,6 +78,7 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<ScheduleHistory> ScheduleHistories { get; set; }
     public virtual DbSet<IncidentReport> IncidentReports { get; set; }
     public virtual DbSet<EquipmentCheckLog> EquipmentCheckLogs { get; set; }
+    public virtual DbSet<SystemSetting> SystemSettings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -532,6 +533,14 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.AssignedTo)
                 .WithMany()
                 .HasForeignKey(d => d.AssignedToId)
+                .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<ServiceReview>(entity =>
+        {
+            entity.HasOne(d => d.RespondedBy)
+                .WithMany()
+                .HasForeignKey(d => d.RespondedById)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 

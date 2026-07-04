@@ -31,6 +31,8 @@ namespace LunaWash.BLL
             services.AddScoped<IBranchService, BranchService>();
             services.AddScoped<IIncidentService, IncidentService>();
             services.AddScoped<IMaintenanceService, MaintenanceService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<ISystemSettingService, SystemSettingService>();
             return services;
         }
     }

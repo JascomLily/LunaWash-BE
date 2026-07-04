@@ -107,18 +107,69 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        public async Task<System.Collections.Generic.IEnumerable<ReviewDto>> GetReviewsByBranchAsync(string branchId)
+        {
+            var reviews = await _context.ServiceReviews
+                .Include(r => r.RespondedBy)
+                .Include(r => r.Booking)
+                .ThenInclude(b => b.Customer)
+                .Where(r => r.BranchId == branchId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return reviews.Select(r => new ReviewDto
+            {
+                Id = r.Id,
+                BookingId = r.BookingId,
+                BranchId = r.BranchId,
+                OverallRating = r.OverallRating,
+                CleanlinessRating = r.CleanlinessRating,
+                SpeedRating = r.SpeedRating,
+                StaffRating = r.StaffRating,
+                Comment = r.Comment,
+                CreatedAt = r.CreatedAt,
+                ResponseText = r.ResponseText,
+                RespondedById = r.RespondedById,
+                RespondedByName = r.RespondedBy?.FullName,
+                RespondedAt = r.RespondedAt,
+                CustomerName = r.Booking?.Customer?.FullName ?? "Khách hàng"
+            });
+        }
+
+        public async Task<bool> RespondToReviewAsync(string reviewId, string respondedById, string responseText)
+        {
+            var review = await _context.ServiceReviews.FirstOrDefaultAsync(r => r.Id == reviewId);
+            if (review == null) return false;
+
+            review.ResponseText = responseText;
+            review.RespondedById = respondedById;
+            review.RespondedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         private ReviewDto MapToDto(ServiceReview review)
         {
+            var customerName = _context.Bookings.Include(b => b.Customer).FirstOrDefault(b => b.Id == review.BookingId)?.Customer?.FullName ?? "Khách hàng";
+            var respondedByName = review.RespondedById != null ? _context.Users.FirstOrDefault(u => u.Id == review.RespondedById)?.FullName : null;
+
             return new ReviewDto
             {
                 Id = review.Id,
                 BookingId = review.BookingId,
+                BranchId = review.BranchId,
                 OverallRating = review.OverallRating,
                 CleanlinessRating = review.CleanlinessRating,
                 SpeedRating = review.SpeedRating,
                 StaffRating = review.StaffRating,
                 Comment = review.Comment,
-                CreatedAt = review.CreatedAt
+                CreatedAt = review.CreatedAt,
+                ResponseText = review.ResponseText,
+                RespondedById = review.RespondedById,
+                RespondedByName = respondedByName,
+                RespondedAt = review.RespondedAt,
+                CustomerName = customerName
             };
         }
     }

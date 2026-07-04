@@ -200,6 +200,24 @@ namespace LunaWash.BLL.Services
                 }
 
                 string paymentMethod = parsedPaymentMethod;
+
+                if (paymentMethod == "vnpay")
+                {
+                    var vnpaySetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Id == "Payment_VNPay_Enabled");
+                    if (vnpaySetting != null && !string.Equals(vnpaySetting.Value, "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new Exception("Cổng thanh toán VNPay hiện đang tạm bảo trì/tắt.");
+                    }
+                }
+                else
+                {
+                    var cashSetting = await _context.SystemSettings.FirstOrDefaultAsync(s => s.Id == "Payment_Cash_Enabled");
+                    if (cashSetting != null && !string.Equals(cashSetting.Value, "true", StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new Exception("Thanh toán trực tiếp hiện đang tạm bảo trì/tắt.");
+                    }
+                }
+
                 int totalPrice = basePrice;
 
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))

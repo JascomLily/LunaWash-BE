@@ -13,5 +13,8 @@ namespace LunaWash.BLL.Interfaces
         Task<IEnumerable<ShiftTemplateResponseDto>> GetShiftTemplatesAsync(string branchId);
         Task<bool> SaveShiftTemplatesAsync(string branchId, string managerId, SaveShiftTemplatesDto dto);
         Task<IEnumerable<ScheduleHistoryResponseDto>> GetScheduleHistoryAsync(string branchId);
+        Task<bool> UpdateEmployeeSalaryAsync(string employeeId, decimal salary);
+        Task<bool> UpdateEmployeeLeaveDaysAsync(string employeeId, int leaveDays);
+        Task<bool> ToggleEmployeeActiveAsync(string employeeId, bool isActive);
     }
 }

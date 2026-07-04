@@ -87,5 +87,32 @@ namespace LunaWash.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpGet("branch/{branchId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetReviewsByBranch(string branchId)
+        {
+            var reviews = await _reviewService.GetReviewsByBranchAsync(branchId);
+            return Ok(reviews);
+        }
+
+        [HttpPut("{id}/respond")]
+        public async Task<IActionResult> RespondToReview(string id, [FromBody] ReviewRespondDto dto)
+        {
+            try
+            {
+                var userId = GetCurrentUserId();
+                if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+                var success = await _reviewService.RespondToReviewAsync(id, userId, dto.ResponseText);
+                if (success)
+                    return Ok(new { message = "Đã phản hồi đánh giá thành công." });
+                return BadRequest(new { message = "Không tìm thấy đánh giá." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

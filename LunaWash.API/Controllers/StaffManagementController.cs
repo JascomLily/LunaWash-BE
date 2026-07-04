@@ -102,5 +102,53 @@ namespace LunaWash.API.Controllers
                 return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
             }
         }
+
+        [HttpPut("employees/{id}/salary")]
+        [Authorize]
+        public async Task<IActionResult> UpdateSalary(string id, [FromBody] decimal salary)
+        {
+            try
+            {
+                var success = await _staffService.UpdateEmployeeSalaryAsync(id, salary);
+                if (success) return Ok(new { message = "Cập nhật lương nhân viên thành công." });
+                return NotFound(new { message = "Không tìm thấy nhân viên." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("employees/{id}/leave-days")]
+        [Authorize]
+        public async Task<IActionResult> UpdateLeaveDays(string id, [FromBody] int leaveDays)
+        {
+            try
+            {
+                var success = await _staffService.UpdateEmployeeLeaveDaysAsync(id, leaveDays);
+                if (success) return Ok(new { message = "Cập nhật số ngày phép thành công." });
+                return NotFound(new { message = "Không tìm thấy nhân viên." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPut("employees/{id}/toggle-active")]
+        [Authorize]
+        public async Task<IActionResult> ToggleActive(string id, [FromBody] bool isActive)
+        {
+            try
+            {
+                var success = await _staffService.ToggleEmployeeActiveAsync(id, isActive);
+                if (success) return Ok(new { message = "Cập nhật trạng thái tài khoản nhân viên thành công." });
+                return NotFound(new { message = "Không tìm thấy nhân viên." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }

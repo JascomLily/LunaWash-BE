@@ -10,6 +10,8 @@ namespace LunaWash.BLL.DTOs
         public decimal PointsMultiplier { get; set; }
         public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
+        public int KeepPoints { get; set; }
+        public int AdvanceBookingDays { get; set; }
     }
 
     public class MembershipTierResponseDto
@@ -20,6 +22,8 @@ namespace LunaWash.BLL.DTOs
         public decimal PointsMultiplier { get; set; }
         public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
+        public int KeepPoints { get; set; }
+        public int AdvanceBookingDays { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 

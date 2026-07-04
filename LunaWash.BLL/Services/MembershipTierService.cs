@@ -49,6 +49,8 @@ namespace LunaWash.BLL.Services
                 PointsMultiplier = dto.PointsMultiplier,
                 PriorityLevel = dto.PriorityLevel,
                 DiscountPercent = dto.DiscountPercent,
+                KeepPoints = dto.KeepPoints,
+                AdvanceBookingDays = dto.AdvanceBookingDays,
                 CreatedAt = DateTime.UtcNow,
                 IsDeleted = false
             };
@@ -71,6 +73,8 @@ namespace LunaWash.BLL.Services
             tier.PointsMultiplier = dto.PointsMultiplier;
             tier.PriorityLevel = dto.PriorityLevel;
             tier.DiscountPercent = dto.DiscountPercent;
+            tier.KeepPoints = dto.KeepPoints;
+            tier.AdvanceBookingDays = dto.AdvanceBookingDays;
             tier.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -165,6 +169,8 @@ namespace LunaWash.BLL.Services
                 PointsMultiplier = t.PointsMultiplier,
                 PriorityLevel = t.PriorityLevel,
                 DiscountPercent = t.DiscountPercent,
+                KeepPoints = t.KeepPoints,
+                AdvanceBookingDays = t.AdvanceBookingDays,
                 CreatedAt = t.CreatedAt
             };
         }
