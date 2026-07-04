@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,10 +13,12 @@ namespace LunaWash.BLL.Services
     public class EmployeeService : IEmployeeService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public EmployeeService(ApplicationDbContext context)
+        public EmployeeService(ApplicationDbContext context, IEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<IEnumerable<EmployeeResponseDto>> GetEmployeesByBranchAsync(string branchId)
@@ -44,6 +46,9 @@ namespace LunaWash.BLL.Services
 
         public async Task<EmployeeResponseDto?> AddEmployeeAsync(EmployeeCreateDto dto)
         {
+            var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+            if (existingUser != null) throw new InvalidOperationException("Email này đã được sử dụng bởi một tài khoản khác.");
+
             var role = await _context.Roles.FirstOrDefaultAsync(r => r.Id == dto.RoleId);
             if (role == null) return null;
 
@@ -76,6 +81,27 @@ namespace LunaWash.BLL.Services
             _context.StaffProfiles.Add(profile);
             await _context.SaveChangesAsync();
 
+            // Send email to new employee
+            string subject = "Tài khoản nhân viên LunaWash của bạn";
+            string body = $@"
+                <h3>Chào mừng gia nhập LunaWash!</h3>
+                <p>Tài khoản đăng nhập hệ thống của bạn đã được tạo thành công.</p>
+                <p><strong>Email:</strong> {dto.Email}</p>
+                <p><strong>Mật khẩu:</strong> {password}</p>
+                <br>
+                <p>Vui lòng đăng nhập bằng Email và Mật khẩu này. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>
+                <p>Trân trọng,<br>LunaWash Admin</p>
+            ";
+            
+            try 
+            {
+                await _emailService.SendEmailAsync(dto.Email, subject, body);
+            } 
+            catch (Exception ex)
+            {
+                Console.WriteLine("Lỗi gửi mail: " + ex.Message);
+            }
+
             return new EmployeeResponseDto
             {
                 Id = user.Id,
@@ -97,6 +123,7 @@ namespace LunaWash.BLL.Services
             if (user == null) return false;
 
             user.IsDeleted = true;
+            user.IsActive = false;
             await _context.SaveChangesAsync();
             return true;
         }

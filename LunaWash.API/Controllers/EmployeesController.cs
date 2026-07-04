@@ -28,9 +28,16 @@ namespace LunaWash.API.Controllers
         [HttpPost]
         public async Task<IActionResult> AddEmployee([FromBody] EmployeeCreateDto dto)
         {
-            var employee = await _employeeService.AddEmployeeAsync(dto);
-            if (employee == null) return BadRequest("KhA'ng th thAm nhAn viAn (Sai RoleId)");
-            return Ok(employee);
+            try
+            {
+                var employee = await _employeeService.AddEmployeeAsync(dto);
+                if (employee == null) return BadRequest("Không thể thêm nhân viên (Sai RoleId)");
+                return Ok(employee);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpDelete("{id}")]
@@ -38,26 +45,26 @@ namespace LunaWash.API.Controllers
         {
             var result = await _employeeService.DeleteEmployeeAsync(id);
             if (!result) return NotFound();
-            return Ok(new { message = "XA3a nhAn viAn thAnh cA'ng" });
+            return Ok(new { message = "Xóa nhân viên thành công" });
         }
 
         [HttpPost("checkin")]
         public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
         {
             var result = await _employeeService.CheckInAsync(request.EmployeeId, request.BranchId);
-            if (!result) return BadRequest("?A? Check-in hA'm nay r?i.");
-            return Ok(new { message = "Check-in thAnh cA'ng" });
+            if (!result) return BadRequest("Đã Check-in hôm nay rồi.");
+            return Ok(new { message = "Check-in thành công" });
         }
 
         [HttpPost("checkout")]
         public async Task<IActionResult> CheckOut([FromBody] CheckOutRequest request)
         {
             var result = await _employeeService.CheckOutAsync(request.EmployeeId);
-            if (!result) return BadRequest("Cha Check-in ho-c `A? Check-out r?i.");
-            return Ok(new { message = "Check-out thAnh cA'ng" });
+            if (!result) return BadRequest("Chưa Check-in hoặc Đã Check-out rồi.");
+            return Ok(new { message = "Check-out thành công" });
         }
 
-        [HttpGet("attendance/branch/{branchId}")]
+        [HttpGet("branch/{branchId}/attendance")]
         public async Task<IActionResult> GetAttendances(string branchId, [FromQuery] string date)
         {
             var attendances = await _employeeService.GetAttendancesByBranchAndDateAsync(branchId, date);
