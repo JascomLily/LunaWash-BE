@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 namespace LunaWash.API.Controllers
 {
     [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class EmployeesController : ControllerBase
     {

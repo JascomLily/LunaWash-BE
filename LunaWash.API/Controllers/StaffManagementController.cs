@@ -8,6 +8,7 @@ using LunaWash.BLL.Interfaces;
 namespace LunaWash.API.Controllers
 {
     [Route("api/[controller]")]
+    [Route("[controller]")]
     [ApiController]
     public class StaffManagementController : ControllerBase
     {

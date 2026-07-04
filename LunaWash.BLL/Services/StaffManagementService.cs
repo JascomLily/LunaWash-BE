@@ -39,7 +39,7 @@ namespace LunaWash.BLL.Services
             }).ToList();
         }
 
-        public async Task<IEnumerable<AttendanceResponseDto>> GetAttendanceAsync(string branchId, DateTime date, string shift)
+        public async Task<IEnumerable<DailyAttendanceResponseDto>> GetAttendanceAsync(string branchId, DateTime date, string shift)
         {
             var employees = await _context.Users
                 .Include(u => u.Role)
@@ -52,11 +52,11 @@ namespace LunaWash.BLL.Services
                 .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date.Date == date.Date && a.Shift == shift)
                 .ToListAsync();
 
-            var result = new List<AttendanceResponseDto>();
+            var result = new List<DailyAttendanceResponseDto>();
             foreach (var emp in employees)
             {
                 var record = attendanceRecords.FirstOrDefault(r => r.EmployeeId == emp.Id);
-                result.Add(new AttendanceResponseDto
+                result.Add(new DailyAttendanceResponseDto
                 {
                     EmployeeId = emp.Id,
                     FullName = emp.FullName,

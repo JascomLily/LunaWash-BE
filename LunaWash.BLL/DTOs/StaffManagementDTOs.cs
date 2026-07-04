@@ -15,7 +15,7 @@ namespace LunaWash.BLL.DTOs
         public bool IsActive { get; set; }
     }
 
-    public class AttendanceResponseDto
+    public class DailyAttendanceResponseDto
     {
         public string EmployeeId { get; set; } = null!;
         public string FullName { get; set; } = null!;
