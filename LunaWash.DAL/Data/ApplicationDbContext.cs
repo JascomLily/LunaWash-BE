@@ -67,6 +67,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Promotion> Promotions { get; set; }
 
+    public virtual DbSet<Banner> Banners { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Booking>(entity =>
@@ -381,6 +383,16 @@ public partial class ApplicationDbContext : DbContext
                 .WithMany(p => p.PackageServices)
                 .HasForeignKey(d => d.ServiceId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Banner>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.ImageUrl).IsRequired().HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Title).HasMaxLength(150);
+            entity.Property(e => e.RedirectUrl).HasMaxLength(250);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
         });
 
         OnModelCreatingPartial(modelBuilder);

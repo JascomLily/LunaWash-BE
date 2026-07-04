@@ -25,6 +25,7 @@ namespace LunaWash.BLL
             services.AddScoped<IEquipmentService, EquipmentService>();
             services.AddScoped<IServicePackageService, ServicePackageService>();
             services.AddScoped<IMembershipTierService, MembershipTierService>();
+            services.AddScoped<IBannerService, BannerService>();
             return services;
         }
     }
