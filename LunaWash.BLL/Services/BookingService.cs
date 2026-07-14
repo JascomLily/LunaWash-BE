@@ -151,9 +151,14 @@ namespace LunaWash.BLL.Services
                             if (extraServicePrices.Any())
                             {
                                 basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
-                                var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
-                                extrasString = string.Join(", ", extraServiceNames);
-                                services += " + " + extrasString;
+                                var extraServicesList = extraServicePrices.Select(sp => new {
+                                    name = sp.Service?.ServiceName ?? "Dịch vụ phụ",
+                                    price = sp.Price,
+                                    duration = sp.DurationMinutes,
+                                    points = sp.PointsRewarded
+                                }).ToList();
+                                extrasString = JsonSerializer.Serialize(extraServicesList);
+                                services += " + " + string.Join(", ", extraServicesList.Select(x => x.name));
                             }
                         }
                     }
@@ -191,12 +196,17 @@ namespace LunaWash.BLL.Services
                         }
 
                         // Xử lý các dịch vụ phụ (AddOn)
-                        var extraServiceNames = servicePrices
+                        var extraServicesList = servicePrices
                             .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
-                            .Select(sp => sp.Service!.ServiceName)
+                            .Select(sp => new {
+                                name = sp.Service!.ServiceName,
+                                price = sp.Price,
+                                duration = sp.DurationMinutes,
+                                points = sp.PointsRewarded
+                            })
                             .ToList();
                         
-                        extrasString = string.Join(", ", extraServiceNames);
+                        extrasString = JsonSerializer.Serialize(extraServicesList);
                     }
                 }
 
