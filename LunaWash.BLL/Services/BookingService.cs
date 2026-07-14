@@ -211,7 +211,7 @@ namespace LunaWash.BLL.Services
 
                     if (appliedVoucher != null && appliedVoucher.Voucher != null && DateTime.UtcNow <= appliedVoucher.Voucher.ExpiryDate)
                     {
-                        totalPrice -= (int)appliedVoucher.Voucher.DiscountValue;
+                        totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
                         if (totalPrice < 0) totalPrice = 0;
                         appliedVoucher.IsUsed = true;
                         appliedVoucher.UsedAt = DateTime.UtcNow;
