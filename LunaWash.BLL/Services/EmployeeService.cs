@@ -21,6 +21,29 @@ namespace LunaWash.BLL.Services
             _emailService = emailService;
         }
 
+        public async Task<IEnumerable<EmployeeResponseDto>> GetAllEmployeesAsync()
+        {
+            var users = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.StaffProfile)
+                .Where(u => !u.IsDeleted && (u.Role.RoleName == "Staff" || u.Role.RoleName == "TechnicalStaff" || u.Role.RoleName == "BranchManager"))
+                .ToListAsync();
+
+            return users.Select(u => new EmployeeResponseDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                RoleId = u.RoleId,
+                RoleName = u.Role.RoleName,
+                BranchId = u.BranchId,
+                IsActive = u.IsActive,
+                Salary = u.StaffProfile?.Salary ?? 0,
+                LeaveDays = u.StaffProfile?.LeaveDays ?? 0
+            });
+        }
+
         public async Task<IEnumerable<EmployeeResponseDto>> GetEmployeesByBranchAsync(string branchId)
         {
             var users = await _context.Users
@@ -115,6 +138,26 @@ namespace LunaWash.BLL.Services
                 Salary = profile.Salary,
                 LeaveDays = profile.LeaveDays
             };
+        }
+
+        public async Task<bool> UpdateEmployeeSalaryAsync(string id, decimal newSalary)
+        {
+            var profile = await _context.StaffProfiles.FirstOrDefaultAsync(p => p.UserId == id);
+            if (profile == null) return false;
+            
+            profile.Salary = newSalary;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateEmployeeStatusAsync(string id, bool isActive)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return false;
+
+            user.IsActive = isActive;
+            await _context.SaveChangesAsync();
+            return true;
         }
 
         public async Task<bool> DeleteEmployeeAsync(string id)
