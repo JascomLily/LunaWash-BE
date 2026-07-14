@@ -152,13 +152,12 @@ namespace LunaWash.BLL.Services
                             {
                                 basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
                                 var extraServicesList = extraServicePrices.Select(sp => new {
-                                    name = sp.Service?.ServiceName ?? "Dịch vụ phụ",
-                                    price = sp.Price,
-                                    duration = sp.DurationMinutes,
-                                    points = sp.PointsRewarded
+                                    n = sp.Service?.ServiceName ?? "Dịch vụ phụ",
+                                    p = sp.Price,
+                                    d = sp.DurationMinutes,
+                                    pt = sp.PointsRewarded
                                 }).ToList();
                                 extrasString = JsonSerializer.Serialize(extraServicesList);
-                                services += " + " + string.Join(", ", extraServicesList.Select(x => x.name));
                             }
                         }
                     }
@@ -199,10 +198,10 @@ namespace LunaWash.BLL.Services
                         var extraServicesList = servicePrices
                             .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
                             .Select(sp => new {
-                                name = sp.Service!.ServiceName,
-                                price = sp.Price,
-                                duration = sp.DurationMinutes,
-                                points = sp.PointsRewarded
+                                n = sp.Service!.ServiceName,
+                                p = sp.Price,
+                                d = sp.DurationMinutes,
+                                pt = sp.PointsRewarded
                             })
                             .ToList();
                         
