@@ -2,10 +2,9 @@ $connString = 'Server=tcp:lunawash-server-db.database.windows.net,1433;Initial C
 $connection = New-Object System.Data.SqlClient.SqlConnection($connString)
 $connection.Open()
 $command = $connection.CreateCommand()
-$command.CommandText = 'SELECT ScheduledStartTime FROM Bookings WHERE Status = ''Completed'''
+$command.CommandText = 'SELECT Id, LEN(ImageUrl) FROM Banners'
 $reader = $command.ExecuteReader()
-$reader.Read()
-$date = $reader.GetDateTime(0)
-Write-Output $date.ToString("dd/MM/yyyy")
-Write-Output $date.ToString("dd/MM/yyyy", [System.Globalization.CultureInfo]::InvariantCulture)
+while ($reader.Read()) {
+    Write-Output "$($reader[0]): $($reader[1])"
+}
 $connection.Close()
