@@ -34,6 +34,22 @@ namespace LunaWash.BLL.Services
             int durationMinutes = dto.Duration > 0 ? dto.Duration : 30; // Lấy từ nhánh main
             var endTime = startTime.AddMinutes(durationMinutes);
             var bookingDate = startTime.Date;
+
+            // Kiểm tra giới hạn số ngày đặt trước theo hạng thành viên
+            var customerProfile = await _context.CustomerProfiles
+                .Include(cp => cp.MembershipTier)
+                .FirstOrDefaultAsync(cp => cp.UserId == userId);
+            
+            int maxDays = customerProfile?.MembershipTier?.MaxBookingDays ?? 3; // Mặc định 3 ngày
+            var currentLocalTime = DateTime.UtcNow.AddHours(7).Date;
+            if (bookingDate > currentLocalTime.AddDays(maxDays))
+            {
+                throw new InvalidOperationException($"Hạng thành viên của bạn chỉ được phép đặt lịch trước tối đa {maxDays} ngày.");
+            }
+            if (bookingDate < currentLocalTime)
+            {
+                throw new InvalidOperationException("Không thể đặt lịch cho ngày trong quá khứ.");
+            }
   
             using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try

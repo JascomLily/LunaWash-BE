@@ -17,11 +17,34 @@ namespace LunaWash.API.Controllers
             _employeeService = employeeService;
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetAllEmployees()
+        {
+            var employees = await _employeeService.GetAllEmployeesAsync();
+            return Ok(employees);
+        }
+
         [HttpGet("branch/{branchId}")]
         public async Task<IActionResult> GetEmployeesByBranch(string branchId)
         {
             var employees = await _employeeService.GetEmployeesByBranchAsync(branchId);
             return Ok(employees);
+        }
+
+        [HttpPut("{id}/salary")]
+        public async Task<IActionResult> UpdateSalary(string id, [FromBody] UpdateSalaryRequest request)
+        {
+            var result = await _employeeService.UpdateEmployeeSalaryAsync(id, request.Salary);
+            if (!result) return NotFound("Không tìm thấy nhân viên hoặc hồ sơ nhân sự.");
+            return Ok(new { message = "Cập nhật lương thành công" });
+        }
+
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusRequest request)
+        {
+            var result = await _employeeService.UpdateEmployeeStatusAsync(id, request.IsActive);
+            if (!result) return NotFound("Không tìm thấy nhân viên.");
+            return Ok(new { message = "Cập nhật trạng thái thành công" });
         }
 
         [HttpPost]
@@ -80,5 +103,15 @@ namespace LunaWash.API.Controllers
     public class CheckOutRequest
     {
         public string EmployeeId { get; set; } = null!;
+    }
+
+    public class UpdateSalaryRequest
+    {
+        public decimal Salary { get; set; }
+    }
+
+    public class UpdateStatusRequest
+    {
+        public bool IsActive { get; set; }
     }
 }

@@ -1,0 +1,8 @@
+{
+  "IsCashActive": true,
+  "IsVnpayActive": false,
+  "IsMomoActive": false,
+  "IsZaloPayActive": false,
+  "VnpayTmnCode": "",
+  "VnpayHashSecret": ""
+}
