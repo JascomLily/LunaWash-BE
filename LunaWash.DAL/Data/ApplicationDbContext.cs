@@ -70,6 +70,7 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Voucher> Vouchers { get; set; }
 
     public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
+    public virtual DbSet<Banner> Banners { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
