@@ -514,6 +514,83 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        public async Task<IEnumerable<BookingResponseDTO>> GetBranchHistoryAsync(string branchId)
+        {
+            var bookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId 
+                         && !b.IsDeleted
+                         && (b.Status == "Completed" || b.Status == "Cancelled"))
+                .OrderByDescending(b => b.ScheduledStartTime)
+                .ToListAsync();
+
+            var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
+            var customers = await _context.Users
+                .Where(u => customerIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+            var vehicles = await _context.Vehicles
+                .Where(v => customerIds.Contains(v.CustomerId))
+                .ToDictionaryAsync(v => v.CustomerId, v => $"{v.VehicleModel} • {v.LicensePlate}");
+
+            var result = new List<BookingResponseDTO>();
+            foreach (var b in bookings)
+            {
+                string customerName = customers.ContainsKey(b.CustomerId) ? customers[b.CustomerId] : "Khách hàng";
+                string vehicleInfo = vehicles.ContainsKey(b.CustomerId) ? vehicles[b.CustomerId] : "Xe khách hàng";
+
+                string packageName = "Gói Cơ Bản";
+                string services = "";
+                string extras = "";
+                string paymentMethod = "tien-mat";
+
+                if (!string.IsNullOrEmpty(b.Notes))
+                {
+                    try
+                    {
+                        using (var doc = JsonDocument.Parse(b.Notes))
+                        {
+                            if (doc.RootElement.TryGetProperty("packageName", out var pkg)) packageName = pkg.GetString() ?? packageName;
+                            if (doc.RootElement.TryGetProperty("services", out var srv)) services = srv.GetString() ?? "";
+                            if (doc.RootElement.TryGetProperty("extras", out var ext))
+                            {
+                                if (ext.ValueKind == JsonValueKind.String)
+                                {
+                                    extras = ext.GetString() ?? "";
+                                }
+                                else if (ext.ValueKind == JsonValueKind.Array)
+                                {
+                                    extras = ext.GetRawText();
+                                }
+                            }
+                            if (doc.RootElement.TryGetProperty("paymentMethod", out var pm)) paymentMethod = pm.GetString() ?? paymentMethod;
+                            if (doc.RootElement.TryGetProperty("vehicleInfo", out var vInfo)) vehicleInfo = vInfo.GetString() ?? vehicleInfo;
+                        }
+                    }
+                    catch { }
+                }
+
+                result.Add(new BookingResponseDTO
+                {
+                    Id = b.Id,
+                    PackageName = packageName,
+                    Services = services,
+                    VehicleInfo = vehicleInfo,
+                    Extras = extras,
+                    BranchInfo = b.BranchId,
+                    SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
+                    TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime:dd/MM/yyyy}",
+                    TotalPrice = b.TotalPrice,
+                    Status = b.Status == "Cancelled" ? "Đã hủy" : "Hoàn thành",
+                    PaymentMethod = paymentMethod,
+                    CustomerName = customerName,
+                    BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
+                    CheckoutTime = b.CheckoutTime
+                });
+            }
+
+            return result;
+        }
+
         public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)
         {
             DateOnly targetDate;

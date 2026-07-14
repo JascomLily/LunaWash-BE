@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,6 +10,8 @@ namespace LunaWash.DAL.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            // Skip creating Banners table as it already exists
+            /*
             migrationBuilder.CreateTable(
                 name: "Banners",
                 columns: table => new
@@ -33,6 +35,7 @@ namespace LunaWash.DAL.Migrations
                 name: "IX_Banners_VoucherId",
                 table: "Banners",
                 column: "VoucherId");
+            */
         }
 
         /// <inheritdoc />
