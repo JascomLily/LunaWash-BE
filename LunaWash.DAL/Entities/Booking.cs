@@ -50,4 +50,6 @@ public partial class Booking
     public virtual WashSlot? WashSlot { get; set; }
 
     public virtual ICollection<BookingService> BookingServices { get; set; } = new List<BookingService>();
+
+    public virtual ICollection<CustomerVoucher> CustomerVouchers { get; set; } = new List<CustomerVoucher>();
 }
