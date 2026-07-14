@@ -30,6 +30,7 @@ namespace LunaWash.BLL
             services.AddScoped<IMembershipService, MembershipService>();
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<ITicketService, TicketService>();
+            services.AddScoped<IVoucherService, VoucherService>();
             return services;
         }
     }
