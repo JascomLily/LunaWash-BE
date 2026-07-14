@@ -528,9 +528,12 @@ namespace LunaWash.BLL.Services
                 .Where(u => customerIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName);
 
-            var vehicles = await _context.CustomerVehicles
+            var vehiclesList = await _context.CustomerVehicles
                 .Where(v => customerIds.Contains(v.CustomerId))
-                .ToDictionaryAsync(v => v.CustomerId, v => $"{v.VehicleModel} • {v.LicensePlate}");
+                .ToListAsync();
+            var vehicles = vehiclesList
+                .GroupBy(v => v.CustomerId)
+                .ToDictionary(g => g.Key, g => $"{g.First().VehicleModel} • {g.First().LicensePlate}");
 
             var result = new List<BookingResponseDTO>();
             foreach (var b in bookings)

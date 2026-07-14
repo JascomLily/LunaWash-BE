@@ -2,10 +2,14 @@ $connString = 'Server=tcp:lunawash-server-db.database.windows.net,1433;Initial C
 $connection = New-Object System.Data.SqlClient.SqlConnection($connString)
 $connection.Open()
 $command = $connection.CreateCommand()
-$command.CommandText = 'SELECT COUNT(*) FROM Bookings'
-$totalBookings = $command.ExecuteScalar()
-$command.CommandText = 'SELECT COUNT(*) FROM Bookings WHERE Status = ''Completed'''
-$completedBookings = $command.ExecuteScalar()
+$command.CommandText = 'SELECT CustomerId, COUNT(*) FROM CustomerVehicles GROUP BY CustomerId HAVING COUNT(*) > 1'
+$reader = $command.ExecuteReader()
+$hasDuplicates = $false
+while ($reader.Read()) {
+    $hasDuplicates = $true
+    Write-Output $reader[0].ToString()
+}
+if (-not $hasDuplicates) {
+    Write-Output 'No duplicates'
+}
 $connection.Close()
-Write-Output "Total bookings: $totalBookings"
-Write-Output "Completed bookings: $completedBookings"
