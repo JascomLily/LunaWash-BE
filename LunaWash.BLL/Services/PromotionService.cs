@@ -52,6 +52,29 @@ namespace LunaWash.BLL.Services
             return promotions.Select(MapToResponse).ToList();
         }
 
+        public async Task<List<PromotionResponseDTO>> GetActivePromotionsAsync()
+        {
+            var now = DateTime.UtcNow;
+            var vouchers = await _context.Vouchers
+                .Where(v => !v.IsDeleted && v.IsActive && v.ExpiryDate >= now)
+                .OrderByDescending(v => v.CreatedAt)
+                .ToListAsync();
+
+            return vouchers.Select(v => new PromotionResponseDTO
+            {
+                Id = v.Id,
+                Name = v.VoucherName,
+                Code = $"Giảm {v.DiscountValue}%",
+                DiscountPercent = (int)v.DiscountValue,
+                MaxUsage = null,
+                CurrentUsage = 0,
+                StartDate = v.CreatedAt,
+                EndDate = v.ExpiryDate,
+                IsActive = v.IsActive,
+                Status = "Đang chạy"
+            }).ToList();
+        }
+
         public async Task<ValidatePromotionDTO> ValidatePromoCodeAsync(string code)
         {
             var promotion = await _context.Promotions

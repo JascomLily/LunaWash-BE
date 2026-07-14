@@ -13,6 +13,9 @@ namespace LunaWash.BLL.DTOs
         public int StaffRating { get; set; }
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
+        public string? CustomerName { get; set; }
+        public string? VehicleInfo { get; set; }
+        public string? Reply { get; set; }
     }
 
     public class CreateReviewDto
@@ -52,5 +55,12 @@ namespace LunaWash.BLL.DTOs
         
         [MaxLength(1000)]
         public string? Comment { get; set; }
+    }
+
+    public class ReplyReviewRequestDto
+    {
+        [Required]
+        [MaxLength(2000)]
+        public string ReplyText { get; set; } = null!;
     }
 }

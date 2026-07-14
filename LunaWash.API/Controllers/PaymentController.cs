@@ -17,11 +17,13 @@ namespace LunaWash.API.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
+        private readonly LunaWash.BLL.Interfaces.INotificationService _notificationService;
 
-        public PaymentsController(IConfiguration configuration, ApplicationDbContext context)
+        public PaymentsController(IConfiguration configuration, ApplicationDbContext context, LunaWash.BLL.Interfaces.INotificationService notificationService)
         {
             _configuration = configuration;
             _context = context;
+            _notificationService = notificationService;
         }
 
         [Authorize]
@@ -118,6 +120,14 @@ namespace LunaWash.API.Controllers
                             catch { }
                         }
                         await _context.SaveChangesAsync();
+
+                        // Gửi thông báo thanh toán thành công
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Thanh toán thành công",
+                            $"Thanh toán thành công {bookingAmount:N0}đ qua VNPay cho đơn hàng {booking.Id}.",
+                            "Payment"
+                        );
                     }
                     
                     return Redirect($"{frontendUrl}/payment?status=success&bookingId={bookingId}&amount={bookingAmount}");

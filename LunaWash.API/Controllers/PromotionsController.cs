@@ -45,6 +45,21 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        [HttpGet("active")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<IActionResult> GetActivePromotions()
+        {
+            try
+            {
+                var promotions = await _promotionService.GetActivePromotionsAsync();
+                return Ok(new { success = true, data = promotions });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpGet("validate")]
         public async Task<IActionResult> ValidatePromotion([FromQuery] string code)
         {

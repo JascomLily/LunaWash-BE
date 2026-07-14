@@ -69,6 +69,11 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Promotion> Promotions { get; set; }
 
+    public virtual DbSet<Notification> Notifications { get; set; }
+
+    public virtual DbSet<Voucher> Vouchers { get; set; }
+    public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Booking>(entity =>
@@ -404,6 +409,30 @@ public partial class ApplicationDbContext : DbContext
                 .WithMany(p => p.PackageServices)
                 .HasForeignKey(d => d.ServiceId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CustomerVoucher>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.CustomerId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.VoucherId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.UsedAtBookingId).HasMaxLength(50).IsUnicode(false);
+
+            entity.HasOne(d => d.Customer)
+                .WithMany()
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Voucher)
+                .WithMany(p => p.CustomerVouchers)
+                .HasForeignKey(d => d.VoucherId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.UsedAtBooking)
+                .WithMany()
+                .HasForeignKey(d => d.UsedAtBookingId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         OnModelCreatingPartial(modelBuilder);

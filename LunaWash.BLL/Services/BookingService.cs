@@ -16,11 +16,13 @@ namespace LunaWash.BLL.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
 
-        public BookingService(ApplicationDbContext context, IEmailService emailService)
+        public BookingService(ApplicationDbContext context, IEmailService emailService, INotificationService notificationService)
         {
             _context = context;
             _emailService = emailService;
+            _notificationService = notificationService;
         }
 
         public async Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto)
@@ -309,6 +311,13 @@ namespace LunaWash.BLL.Services
                     _ = _emailService.SendEmailAsync(user.Email, $"Xác Nhận Đặt Lịch #{booking.Id} - LunaWash", emailBody);
                 }
 
+                await _notificationService.CreateNotificationAsync(
+                    userId,
+                    "Đặt lịch thành công",
+                    $"Bạn đã đặt lịch thành công lúc {startTime:HH:mm} tại chi nhánh {booking.Branch?.BranchName ?? "LunaWash"}.",
+                    "Booking"
+                );
+
                 return BuildBookingResponse(booking, -1);
             }
             catch (Exception)
@@ -455,6 +464,13 @@ namespace LunaWash.BLL.Services
                 _ = _emailService.SendEmailAsync(user.Email, $"Thông báo Hủy Lịch #{booking.Id} - LunaWash", emailBody);
             }
 
+            await _notificationService.CreateNotificationAsync(
+                userId,
+                "Lịch hẹn đã bị hủy",
+                $"Lịch hẹn lúc {booking.ScheduledStartTime:HH:mm} của bạn đã bị hủy.",
+                "Booking"
+            );
+
             return true;
         }
 
@@ -528,6 +544,12 @@ namespace LunaWash.BLL.Services
             if ((newStatus == "Checked-In" || newStatus == "Washing") && booking.CheckInTime == null)
             {
                 booking.CheckInTime = DateTime.UtcNow.AddHours(7);
+                await _notificationService.CreateNotificationAsync(
+                    booking.CustomerId,
+                    "Xe đang được rửa",
+                    "Xe của bạn đã được đưa vào khoang rửa. Quá trình đang diễn ra.",
+                    "Service"
+                );
             }
 
             // ==========================================
@@ -619,6 +641,13 @@ namespace LunaWash.BLL.Services
                     {
                         // Nâng hạng cho khách!
                         customerProfile.MembershipTierId = eligibleTier.Id;
+                        
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Chúc mừng thăng hạng",
+                            "Chúc mừng! Bạn đã tích lũy đủ điểm và thăng hạng thành viên. Cảm ơn bạn đã đồng hành cùng LunaWash!",
+                            "System"
+                        );
                     }
                 }
 
@@ -656,6 +685,13 @@ namespace LunaWash.BLL.Services
 
                     _ = _emailService.SendEmailAsync(user.Email, $"Cảm ơn bạn đã sử dụng dịch vụ #{booking.Id} - LunaWash", emailBody);
                 }
+
+                await _notificationService.CreateNotificationAsync(
+                    booking.CustomerId,
+                    "Xe đã rửa xong",
+                    "Xe của bạn đã rửa xong và đang chờ ở bãi đỗ. Vui lòng đến quầy nhận chìa khóa.",
+                    "Service"
+                );
             }
             
             await _context.SaveChangesAsync();

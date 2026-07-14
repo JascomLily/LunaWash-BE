@@ -8,6 +8,7 @@ namespace LunaWash.BLL.Services
     {
         Task<PromotionResponseDTO> CreatePromotionAsync(CreatePromotionDTO dto);
         Task<List<PromotionResponseDTO>> GetAllPromotionsAsync();
+        Task<List<PromotionResponseDTO>> GetActivePromotionsAsync();
         Task<ValidatePromotionDTO> ValidatePromoCodeAsync(string code);
     }
 }
