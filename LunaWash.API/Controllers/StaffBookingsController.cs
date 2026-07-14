@@ -27,6 +27,7 @@ namespace LunaWash.API.Controllers
         }
 
         [HttpGet("history/{branchId}")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetBranchHistory(string branchId)
         {
             var bookings = await _bookingService.GetBranchHistoryAsync(branchId);

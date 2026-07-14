@@ -2,14 +2,10 @@ $connString = 'Server=tcp:lunawash-server-db.database.windows.net,1433;Initial C
 $connection = New-Object System.Data.SqlClient.SqlConnection($connString)
 $connection.Open()
 $command = $connection.CreateCommand()
-$command.CommandText = 'SELECT CustomerId, COUNT(*) FROM CustomerVehicles GROUP BY CustomerId HAVING COUNT(*) > 1'
+$command.CommandText = 'SELECT ScheduledStartTime FROM Bookings WHERE Status = ''Completed'''
 $reader = $command.ExecuteReader()
-$hasDuplicates = $false
-while ($reader.Read()) {
-    $hasDuplicates = $true
-    Write-Output $reader[0].ToString()
-}
-if (-not $hasDuplicates) {
-    Write-Output 'No duplicates'
-}
+$reader.Read()
+$date = $reader.GetDateTime(0)
+Write-Output $date.ToString("dd/MM/yyyy")
+Write-Output $date.ToString("dd/MM/yyyy", [System.Globalization.CultureInfo]::InvariantCulture)
 $connection.Close()

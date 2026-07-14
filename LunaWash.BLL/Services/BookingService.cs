@@ -581,7 +581,7 @@ namespace LunaWash.BLL.Services
                     Extras = extras,
                     BranchInfo = b.BranchId,
                     SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
-                    TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime:dd/MM/yyyy}",
+                    TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)}",
                     TotalPrice = b.TotalPrice.ToString("N0") + "đ",
                     Status = b.Status == "Cancelled" ? "Đã hủy" : "Hoàn thành",
                     PaymentMethod = paymentMethod,
