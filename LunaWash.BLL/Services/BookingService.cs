@@ -204,16 +204,19 @@ namespace LunaWash.BLL.Services
                 string paymentMethod = parsedPaymentMethod;
                 int totalPrice = basePrice;
 
+                CustomerVoucher? appliedVoucher = null;
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
                 {
-                    var promotion = await _context.Promotions.FirstOrDefaultAsync(p => p.Code.ToUpper() == dto.PromoCode.ToUpper() && p.IsActive && !p.IsDeleted);
-                    if (promotion != null && DateTime.UtcNow >= promotion.StartDate && DateTime.UtcNow <= promotion.EndDate)
+                    appliedVoucher = await _context.CustomerVouchers
+                        .Include(cv => cv.Voucher)
+                        .FirstOrDefaultAsync(cv => cv.Id == dto.PromoCode && cv.CustomerId == userId && !cv.IsUsed && !cv.IsDeleted);
+
+                    if (appliedVoucher != null && appliedVoucher.Voucher != null && DateTime.UtcNow <= appliedVoucher.Voucher.ExpiryDate)
                     {
-                        if (!promotion.MaxUsage.HasValue || promotion.CurrentUsage < promotion.MaxUsage.Value)
-                        {
-                            totalPrice -= (int)(totalPrice * (promotion.DiscountPercent / 100.0));
-                            promotion.CurrentUsage++;
-                        }
+                        totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
+                        if (totalPrice < 0) totalPrice = 0;
+                        appliedVoucher.IsUsed = true;
+                        appliedVoucher.UsedAt = DateTime.UtcNow;
                     }
                 }
 
@@ -264,6 +267,12 @@ namespace LunaWash.BLL.Services
 
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
+                
+                if (appliedVoucher != null)
+                {
+                    appliedVoucher.UsedAtBookingId = booking.Id;
+                    await _context.SaveChangesAsync();
+                }
                 
                 await transaction.CommitAsync();
 

@@ -31,6 +31,8 @@ public partial class User
 
     public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
+    public virtual ICollection<CustomerVoucher> CustomerVouchers { get; set; } = new List<CustomerVoucher>();
+
     public virtual CustomerProfile? CustomerProfile { get; set; }
 
     public virtual StaffProfile? StaffProfile { get; set; }

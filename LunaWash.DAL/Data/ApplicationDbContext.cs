@@ -67,12 +67,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<ServiceFeature> ServiceFeatures { get; set; }
 
-    public virtual DbSet<Promotion> Promotions { get; set; }
-
-    public virtual DbSet<Notification> Notifications { get; set; }
-
     public virtual DbSet<Voucher> Vouchers { get; set; }
+
     public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
+    public virtual DbSet<Banner> Banners { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -415,24 +413,37 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.CustomerId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.VoucherId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.RedeemedDate).HasDefaultValueSql("(getutcdate())");
             entity.Property(e => e.UsedAtBookingId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.VoucherId).HasMaxLength(50).IsUnicode(false);
 
-            entity.HasOne(d => d.Customer)
-                .WithMany()
-                .HasForeignKey(d => d.CustomerId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.Voucher)
-                .WithMany(p => p.CustomerVouchers)
+            entity.HasOne(d => d.Voucher).WithMany(p => p.CustomerVouchers)
                 .HasForeignKey(d => d.VoucherId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Vouchers");
 
-            entity.HasOne(d => d.UsedAtBooking)
-                .WithMany()
+            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerVouchers)
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Users");
+
+            entity.HasOne(d => d.UsedAtBooking).WithMany(p => p.CustomerVouchers)
                 .HasForeignKey(d => d.UsedAtBookingId)
-                .OnDelete(DeleteBehavior.SetNull);
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Bookings");
+        });
+
+        modelBuilder.Entity<Voucher>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.VoucherName).HasMaxLength(150);
         });
 
         OnModelCreatingPartial(modelBuilder);
