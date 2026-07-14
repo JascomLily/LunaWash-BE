@@ -41,6 +41,7 @@ namespace LunaWash.BLL.DTOs
         public string TotalPrice { get; set; } = null!;
         public string Status { get; set; } = null!;
         public string PaymentMethod { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
         public DateTime BookingDate { get; set; }
         public DateTime? CheckoutTime { get; set; }
         public double? Rating { get; set; }

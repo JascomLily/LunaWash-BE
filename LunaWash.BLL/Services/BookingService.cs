@@ -528,7 +528,7 @@ namespace LunaWash.BLL.Services
                 .Where(u => customerIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.FullName);
 
-            var vehicles = await _context.Vehicles
+            var vehicles = await _context.CustomerVehicles
                 .Where(v => customerIds.Contains(v.CustomerId))
                 .ToDictionaryAsync(v => v.CustomerId, v => $"{v.VehicleModel} • {v.LicensePlate}");
 
@@ -579,7 +579,7 @@ namespace LunaWash.BLL.Services
                     BranchInfo = b.BranchId,
                     SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
                     TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime:dd/MM/yyyy}",
-                    TotalPrice = b.TotalPrice,
+                    TotalPrice = b.TotalPrice.ToString("N0") + "đ",
                     Status = b.Status == "Cancelled" ? "Đã hủy" : "Hoàn thành",
                     PaymentMethod = paymentMethod,
                     CustomerName = customerName,
