@@ -56,9 +56,18 @@ public class VoucherService : IVoucherService
 
     public async Task<VoucherDto> CreateVoucherAsync(CreateVoucherDto dto)
     {
+        var idToUse = !string.IsNullOrWhiteSpace(dto.Id) ? dto.Id.Trim() : Guid.NewGuid().ToString();
+
+        // Kiểm tra xem voucher đã tồn tại chưa
+        var existing = await _context.Vouchers.FindAsync(idToUse);
+        if (existing != null)
+        {
+            throw new Exception("Mã Code này đã tồn tại!");
+        }
+
         var voucher = new Voucher
         {
-            Id = Guid.NewGuid().ToString(),
+            Id = idToUse,
             VoucherName = dto.VoucherName,
             Description = dto.Description,
             PointsRequired = dto.PointsRequired,

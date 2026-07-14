@@ -37,8 +37,15 @@ public class VouchersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateVoucher([FromBody] CreateVoucherDto dto)
     {
-        var voucher = await _voucherService.CreateVoucherAsync(dto);
-        return Ok(new { success = true, data = voucher });
+        try
+        {
+            var voucher = await _voucherService.CreateVoucherAsync(dto);
+            return Ok(new { success = true, data = voucher, message = "Tạo mã thành công!" });
+        }
+        catch (System.Exception ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
     }
 
     [Authorize(Roles = "Admin")]

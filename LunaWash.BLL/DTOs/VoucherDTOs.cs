@@ -25,6 +25,7 @@ public class CustomerVoucherDto
 
 public class CreateVoucherDto
 {
+    public string? Id { get; set; }
     public string VoucherName { get; set; } = string.Empty;
     public string? Description { get; set; }
     public int PointsRequired { get; set; }
