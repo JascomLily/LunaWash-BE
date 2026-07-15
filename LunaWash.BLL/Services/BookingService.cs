@@ -232,14 +232,25 @@ namespace LunaWash.BLL.Services
                 CustomerVoucher? appliedVoucher = null;
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
                 {
+                    // Cho phép truyền vào PromoCode là CustomerVoucher.Id hoặc Voucher.Id (VD: LUNANEW)
                     appliedVoucher = await _context.CustomerVouchers
                         .Include(cv => cv.Voucher)
-                        .FirstOrDefaultAsync(cv => cv.Id == dto.PromoCode && cv.CustomerId == userId && !cv.IsUsed && !cv.IsDeleted);
+                        .FirstOrDefaultAsync(cv => (cv.Id == dto.PromoCode || cv.VoucherId == dto.PromoCode) && cv.CustomerId == userId && !cv.IsUsed && !cv.IsDeleted);
 
                     if (appliedVoucher != null && appliedVoucher.Voucher != null && DateTime.UtcNow <= appliedVoucher.Voucher.ExpiryDate)
                     {
-                        totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
+                        // Kiểm tra nếu DiscountValue <= 100 thì là %, ngược lại là số tiền cố định
+                        if (appliedVoucher.Voucher.DiscountValue <= 100)
+                        {
+                            totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
+                        }
+                        else
+                        {
+                            totalPrice -= (int)appliedVoucher.Voucher.DiscountValue;
+                        }
+                        
                         if (totalPrice < 0) totalPrice = 0;
+                        
                         appliedVoucher.IsUsed = true;
                         appliedVoucher.UsedAt = DateTime.UtcNow;
                     }
