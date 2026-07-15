@@ -77,6 +77,10 @@ namespace LunaWash.BLL.Services
                     if (tierName == "Member") tierName = "Đồng";
                 }
             }
+            else if (user.Role.RoleName == "Admin" || user.Role.RoleName == "Staff" || user.Role.RoleName == "BranchManager")
+            {
+                maxBookingDays = 365; // Admin/Staff không bị giới hạn
+            }
 
             var token = GenerateJwtToken(user);
 
