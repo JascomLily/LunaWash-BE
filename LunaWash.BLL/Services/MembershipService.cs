@@ -34,12 +34,13 @@ namespace LunaWash.BLL.Services
                 Id = t.Id,
                 TierName = t.TierName,
                 MinPoints = t.MinPoints,
+                MinMaintainPoints = t.MinMaintainPoints,
                 PointsMultiplier = t.PointsMultiplier,
                 PriorityLevel = t.PriorityLevel,
                 DiscountPercent = t.DiscountPercent,
-                MaxBookingDays = t.MaxBookingDays,
-                CustomerCount = customerCounts.ContainsKey(t.Id) ? customerCounts[t.Id] : 0
-            });
+                CustomerCount = customerCounts.ContainsKey(t.Id) ? customerCounts[t.Id] : 0,
+                MaxBookingDays = t.MaxBookingDays
+            }).ToList();
         }
 
         public async Task<bool> UpdateTierAsync(string id, MembershipTierUpdateDto dto)
@@ -48,6 +49,7 @@ namespace LunaWash.BLL.Services
             if (tier == null) return false;
 
             tier.MinPoints = dto.MinPoints;
+            tier.MinMaintainPoints = dto.MinMaintainPoints;
             tier.PointsMultiplier = dto.PointsMultiplier;
             tier.PriorityLevel = dto.PriorityLevel;
             tier.DiscountPercent = dto.DiscountPercent;
