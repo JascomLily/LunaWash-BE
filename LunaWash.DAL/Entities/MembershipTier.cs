@@ -10,6 +10,8 @@ public partial class MembershipTier
     public string TierName { get; set; } = null!;
 
     public int MinPoints { get; set; }
+    
+    public int MinMaintainPoints { get; set; }
 
     public decimal PointsMultiplier { get; set; }
 

@@ -15,6 +15,7 @@ namespace LunaWash.BLL.Interfaces
         public string Id { get; set; } = null!;
         public string TierName { get; set; } = null!;
         public int MinPoints { get; set; }
+        public int MinMaintainPoints { get; set; }
         public decimal PointsMultiplier { get; set; }
         public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
@@ -25,6 +26,7 @@ namespace LunaWash.BLL.Interfaces
     public class MembershipTierUpdateDto
     {
         public int MinPoints { get; set; }
+        public int MinMaintainPoints { get; set; }
         public decimal PointsMultiplier { get; set; }
         public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
