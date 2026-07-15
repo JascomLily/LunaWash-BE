@@ -51,13 +51,9 @@ public class BannersController : ControllerBase
     [HttpPost("save")]
     public async Task<IActionResult> SaveBanners([FromBody] List<SaveBannerDto> bannerDtos)
     {
-        // Nhóm theo platform để xoá và lưu đúng loại
-        var platformsToUpdate = bannerDtos.Select(b => b.PlatformType).Distinct().ToList();
-        if(!platformsToUpdate.Any()) platformsToUpdate = new List<string> { "Web" };
-
-        var existingBanners = await _context.Banners
-            .Where(b => platformsToUpdate.Contains(b.PlatformType))
-            .ToListAsync();
+        // Frontend gửi toàn bộ danh sách banner của cả Web và App trong một request
+        // Vì vậy, chúng ta sẽ xóa toàn bộ banner hiện tại và lưu lại danh sách mới
+        var existingBanners = await _context.Banners.ToListAsync();
         _context.Banners.RemoveRange(existingBanners);
 
         var newBanners = bannerDtos.Select(dto => new Banner
