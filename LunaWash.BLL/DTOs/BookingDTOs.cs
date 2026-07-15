@@ -20,6 +20,7 @@ namespace LunaWash.BLL.DTOs
         public string? PackageId { get; set; }
         public List<string> ServicePriceIds { get; set; } = new List<string>();
         public string? PromoCode { get; set; }
+        public int? TotalPrice { get; set; }
     }
 
     public class OccupiedSlotDTO
