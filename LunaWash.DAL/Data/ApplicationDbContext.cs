@@ -71,6 +71,7 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
     public virtual DbSet<Banner> Banners { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
