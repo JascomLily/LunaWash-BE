@@ -13,6 +13,7 @@ namespace LunaWash.BLL.Services
         Task<bool> HardDeleteBookingAsync(string userId, string bookingId);
 
         Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null);
+        Task<IEnumerable<BookingResponseDTO>> GetBranchHistoryAsync(string branchId);
         Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus);
         Task<(bool Success, string Message)> AddInteriorCleaningAsync(string bookingId);
 

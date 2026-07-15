@@ -4,6 +4,7 @@ using LunaWash.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LunaWash.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260714155453_IncreaseBookingNotesLength")]
+    partial class IncreaseBookingNotesLength
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -77,13 +80,6 @@ namespace LunaWash.DAL.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsHidden")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("PlatformType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("VoucherId")
                         .HasColumnType("varchar(50)");
 
@@ -131,7 +127,8 @@ namespace LunaWash.DAL.Migrations
                         .HasColumnType("bit");
 
                     b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("PriorityScore")
                         .HasColumnType("int");
@@ -536,44 +533,6 @@ namespace LunaWash.DAL.Migrations
                     b.ToTable("MembershipTiers");
                 });
 
-            modelBuilder.Entity("LunaWash.DAL.Entities.Notification", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("varchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Notifications");
-                });
-
             modelBuilder.Entity("LunaWash.DAL.Entities.PackageService", b =>
                 {
                     b.Property<string>("PackageId")
@@ -815,10 +774,6 @@ namespace LunaWash.DAL.Migrations
 
                     b.Property<double>("OverallRating")
                         .HasColumnType("float");
-
-                    b.Property<string>("Reply")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<int>("SpeedRating")
                         .HasColumnType("int");
@@ -1270,17 +1225,6 @@ namespace LunaWash.DAL.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Equipment");
-                });
-
-            modelBuilder.Entity("LunaWash.DAL.Entities.Notification", b =>
-                {
-                    b.HasOne("LunaWash.DAL.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.PackageService", b =>

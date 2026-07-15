@@ -36,6 +36,22 @@ namespace LunaWash.BLL.Services
             int durationMinutes = dto.Duration > 0 ? dto.Duration : 30; // Lấy từ nhánh main
             var endTime = startTime.AddMinutes(durationMinutes);
             var bookingDate = startTime.Date;
+
+            // Kiểm tra giới hạn số ngày đặt trước theo hạng thành viên
+            var customerProfile = await _context.CustomerProfiles
+                .Include(cp => cp.MembershipTier)
+                .FirstOrDefaultAsync(cp => cp.UserId == userId);
+            
+            int maxDays = customerProfile?.MembershipTier?.MaxBookingDays ?? 3; // Mặc định 3 ngày
+            var currentLocalTime = DateTime.UtcNow.AddHours(7).Date;
+            if (bookingDate > currentLocalTime.AddDays(maxDays))
+            {
+                throw new InvalidOperationException($"Hạng thành viên của bạn chỉ được phép đặt lịch trước tối đa {maxDays} ngày.");
+            }
+            if (bookingDate < currentLocalTime)
+            {
+                throw new InvalidOperationException("Không thể đặt lịch cho ngày trong quá khứ.");
+            }
   
             using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
@@ -137,9 +153,13 @@ namespace LunaWash.BLL.Services
                             if (extraServicePrices.Any())
                             {
                                 basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
-                                var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
-                                extrasString = string.Join(", ", extraServiceNames);
-                                services += " + " + extrasString;
+                                var extraServicesList = extraServicePrices.Select(sp => new {
+                                    n = sp.Service?.ServiceName ?? "Dịch vụ phụ",
+                                    p = sp.Price,
+                                    d = sp.DurationMinutes,
+                                    pt = sp.PointsRewarded
+                                }).ToList();
+                                extrasString = JsonSerializer.Serialize(extraServicesList);
                             }
                         }
                     }
@@ -177,12 +197,17 @@ namespace LunaWash.BLL.Services
                         }
 
                         // Xử lý các dịch vụ phụ (AddOn)
-                        var extraServiceNames = servicePrices
+                        var extraServicesList = servicePrices
                             .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
-                            .Select(sp => sp.Service!.ServiceName)
+                            .Select(sp => new {
+                                n = sp.Service!.ServiceName,
+                                p = sp.Price,
+                                d = sp.DurationMinutes,
+                                pt = sp.PointsRewarded
+                            })
                             .ToList();
                         
-                        extrasString = string.Join(", ", extraServiceNames);
+                        extrasString = JsonSerializer.Serialize(extraServicesList);
                     }
                 }
 
@@ -503,6 +528,86 @@ namespace LunaWash.BLL.Services
             _context.Bookings.Remove(booking);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<IEnumerable<BookingResponseDTO>> GetBranchHistoryAsync(string branchId)
+        {
+            var bookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId 
+                         && !b.IsDeleted
+                         && (b.Status == "Completed" || b.Status == "Cancelled"))
+                .OrderByDescending(b => b.ScheduledStartTime)
+                .ToListAsync();
+
+            var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
+            var customers = await _context.Users
+                .Where(u => customerIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+            var vehiclesList = await _context.CustomerVehicles
+                .Where(v => customerIds.Contains(v.CustomerId))
+                .ToListAsync();
+            var vehicles = vehiclesList
+                .GroupBy(v => v.CustomerId)
+                .ToDictionary(g => g.Key, g => $"{g.First().VehicleModel} • {g.First().LicensePlate}");
+
+            var result = new List<BookingResponseDTO>();
+            foreach (var b in bookings)
+            {
+                string customerName = customers.ContainsKey(b.CustomerId) ? customers[b.CustomerId] : "Khách hàng";
+                string vehicleInfo = vehicles.ContainsKey(b.CustomerId) ? vehicles[b.CustomerId] : "Xe khách hàng";
+
+                string packageName = "Gói Cơ Bản";
+                string services = "";
+                string extras = "";
+                string paymentMethod = "tien-mat";
+
+                if (!string.IsNullOrEmpty(b.Notes))
+                {
+                    try
+                    {
+                        using (var doc = JsonDocument.Parse(b.Notes))
+                        {
+                            if (doc.RootElement.TryGetProperty("packageName", out var pkg)) packageName = pkg.GetString() ?? packageName;
+                            if (doc.RootElement.TryGetProperty("services", out var srv)) services = srv.GetString() ?? "";
+                            if (doc.RootElement.TryGetProperty("extras", out var ext))
+                            {
+                                if (ext.ValueKind == JsonValueKind.String)
+                                {
+                                    extras = ext.GetString() ?? "";
+                                }
+                                else if (ext.ValueKind == JsonValueKind.Array)
+                                {
+                                    extras = ext.GetRawText();
+                                }
+                            }
+                            if (doc.RootElement.TryGetProperty("paymentMethod", out var pm)) paymentMethod = pm.GetString() ?? paymentMethod;
+                            if (doc.RootElement.TryGetProperty("vehicleInfo", out var vInfo)) vehicleInfo = vInfo.GetString() ?? vehicleInfo;
+                        }
+                    }
+                    catch { }
+                }
+
+                result.Add(new BookingResponseDTO
+                {
+                    Id = b.Id,
+                    PackageName = packageName,
+                    Services = services,
+                    VehicleInfo = vehicleInfo,
+                    Extras = extras,
+                    BranchInfo = b.BranchId,
+                    SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
+                    TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)}",
+                    TotalPrice = b.TotalPrice.ToString("N0") + "đ",
+                    Status = b.Status == "Cancelled" ? "Đã hủy" : "Hoàn thành",
+                    PaymentMethod = paymentMethod,
+                    CustomerName = customerName,
+                    BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
+                    CheckoutTime = b.CheckoutTime
+                });
+            }
+
+            return result;
         }
 
         public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)

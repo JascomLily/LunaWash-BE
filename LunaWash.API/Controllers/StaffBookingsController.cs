@@ -26,6 +26,14 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
+        [HttpGet("history/{branchId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetBranchHistory(string branchId)
+        {
+            var bookings = await _bookingService.GetBranchHistoryAsync(branchId);
+            return Ok(bookings);
+        }
+
       
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateBookingStatusDTO dto)

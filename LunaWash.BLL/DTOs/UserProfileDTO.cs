@@ -18,5 +18,6 @@ namespace LunaWash.BLL.DTOs
         public int AccumulatedPoints { get; set; }
         public string TierName { get; set; } = null!;
         public decimal DiscountPercent { get; set; }
+        public int MaxBookingDays { get; set; }
     }
 }

@@ -21,10 +21,11 @@ public class BannersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetBanners()
+    public async Task<IActionResult> GetBanners([FromQuery] string platform = "Web")
     {
         var banners = await _context.Banners
             .Include(b => b.Voucher)
+            .Where(b => b.PlatformType == platform)
             .ToListAsync();
 
         var dtos = banners.Select(b => new BannerDto
@@ -32,6 +33,8 @@ public class BannersController : ControllerBase
             Id = b.Id,
             ImageUrl = b.ImageUrl,
             VoucherId = b.VoucherId,
+            PlatformType = b.PlatformType,
+            IsHidden = b.IsHidden,
             Voucher = b.Voucher != null ? new VoucherDto
             {
                 Id = b.Voucher.Id,
@@ -48,18 +51,37 @@ public class BannersController : ControllerBase
     [HttpPost("save")]
     public async Task<IActionResult> SaveBanners([FromBody] List<SaveBannerDto> bannerDtos)
     {
-        var existingBanners = await _context.Banners.ToListAsync();
+        // Nhóm theo platform để xoá và lưu đúng loại
+        var platformsToUpdate = bannerDtos.Select(b => b.PlatformType).Distinct().ToList();
+        if(!platformsToUpdate.Any()) platformsToUpdate = new List<string> { "Web" };
+
+        var existingBanners = await _context.Banners
+            .Where(b => platformsToUpdate.Contains(b.PlatformType))
+            .ToListAsync();
         _context.Banners.RemoveRange(existingBanners);
 
         var newBanners = bannerDtos.Select(dto => new Banner
         {
             ImageUrl = dto.ImageUrl,
-            VoucherId = string.IsNullOrEmpty(dto.VoucherId) ? null : dto.VoucherId
+            VoucherId = string.IsNullOrEmpty(dto.VoucherId) ? null : dto.VoucherId,
+            PlatformType = dto.PlatformType,
+            IsHidden = dto.IsHidden || string.IsNullOrEmpty(dto.ImageUrl)
         }).ToList();
 
         await _context.Banners.AddRangeAsync(newBanners);
         await _context.SaveChangesAsync();
 
         return Ok(new { success = true, message = "Banners saved successfully" });
+    }
+
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadBannerPhoto([FromForm] Microsoft.AspNetCore.Http.IFormFile file, [FromServices] LunaWash.BLL.Interfaces.IPhotoService photoService)
+    {
+        if (file == null || file.Length == 0) return BadRequest("No file uploaded");
+
+        var url = await photoService.UploadPhotoAsync(file);
+        if (string.IsNullOrEmpty(url)) return BadRequest("Failed to upload image");
+
+        return Ok(new { success = true, url });
     }
 }

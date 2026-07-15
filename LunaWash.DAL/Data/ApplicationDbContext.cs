@@ -92,7 +92,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CustomerId)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Notes);
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValue("Pending");

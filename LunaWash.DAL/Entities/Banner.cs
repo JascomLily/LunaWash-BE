@@ -15,4 +15,8 @@ public class Banner
 
     [ForeignKey("VoucherId")]
     public virtual Voucher? Voucher { get; set; }
+
+    public string PlatformType { get; set; } = "Web"; // "Web" or "App"
+    
+    public bool IsHidden { get; set; } = false;
 }
