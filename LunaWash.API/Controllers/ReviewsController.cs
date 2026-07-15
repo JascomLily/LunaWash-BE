@@ -26,6 +26,14 @@ namespace LunaWash.API.Controllers
                 ?? string.Empty;
         }
 
+        [HttpGet("branch/{branchId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetReviewsByBranch(string branchId)
+        {
+            var reviews = await _reviewService.GetReviewsByBranchAsync(branchId);
+            return Ok(reviews);
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
@@ -81,6 +89,23 @@ namespace LunaWash.API.Controllers
                 if (result)
                     return Ok(new { message = "Review deleted successfully" });
                 return BadRequest(new { message = "Failed to delete review" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("{reviewId}/reply")]
+        [Authorize(Roles = "BranchManager,Manager,Admin")]
+        public async Task<IActionResult> ReplyToReview(string reviewId, [FromBody] ReplyReviewRequestDto dto)
+        {
+            try
+            {
+                var result = await _reviewService.ReplyToReviewAsync(reviewId, dto);
+                if (result)
+                    return Ok(new { message = "Đã gửi phản hồi thành công" });
+                return BadRequest(new { message = "Không thể gửi phản hồi" });
             }
             catch (Exception ex)
             {

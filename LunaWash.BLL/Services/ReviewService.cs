@@ -11,10 +11,12 @@ namespace LunaWash.BLL.Services
     public class ReviewService : IReviewService
     {
         private readonly ApplicationDbContext _context;
+        private readonly LunaWash.BLL.Interfaces.INotificationService _notificationService;
 
-        public ReviewService(ApplicationDbContext context)
+        public ReviewService(ApplicationDbContext context, LunaWash.BLL.Interfaces.INotificationService notificationService)
         {
             _context = context;
+            _notificationService = notificationService;
         }
 
         public async Task<ReviewDto> CreateReviewAsync(string userId, CreateReviewDto dto)
@@ -57,9 +59,23 @@ namespace LunaWash.BLL.Services
         public async Task<ReviewDto?> GetReviewByBookingIdAsync(string bookingId)
         {
             var review = await _context.ServiceReviews
+                .Include(r => r.Booking).ThenInclude(b => b.Customer)
+                .Include(r => r.Booking).ThenInclude(b => b.VehicleType)
                 .FirstOrDefaultAsync(r => r.BookingId == bookingId);
 
             return review != null ? MapToDto(review) : null;
+        }
+
+        public async Task<System.Collections.Generic.IEnumerable<ReviewDto>> GetReviewsByBranchAsync(string branchId)
+        {
+            var reviews = await _context.ServiceReviews
+                .Include(r => r.Booking).ThenInclude(b => b.Customer)
+                .Include(r => r.Booking).ThenInclude(b => b.VehicleType)
+                .Where(r => r.BranchId == branchId)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            return reviews.Select(MapToDto);
         }
 
         public async Task<ReviewDto> UpdateReviewAsync(string userId, string bookingId, UpdateReviewDto dto)
@@ -113,13 +129,38 @@ namespace LunaWash.BLL.Services
             {
                 Id = review.Id,
                 BookingId = review.BookingId,
+                CustomerName = review.Booking?.Customer?.FullName ?? "Khách hàng",
+                VehicleInfo = review.Booking?.VehicleType?.TypeName ?? "Chưa xác định",
                 OverallRating = review.OverallRating,
                 CleanlinessRating = review.CleanlinessRating,
                 SpeedRating = review.SpeedRating,
                 StaffRating = review.StaffRating,
                 Comment = review.Comment,
-                CreatedAt = review.CreatedAt
+                CreatedAt = review.CreatedAt,
+                Reply = review.Reply
             };
+        }
+
+        public async Task<bool> ReplyToReviewAsync(string reviewId, ReplyReviewRequestDto dto)
+        {
+            var review = await _context.ServiceReviews
+                .Include(r => r.Booking)
+                .FirstOrDefaultAsync(r => r.Id == reviewId);
+
+            if (review == null)
+                throw new Exception("Không tìm thấy phản hồi này.");
+
+            review.Reply = dto.ReplyText;
+
+            await _notificationService.CreateNotificationAsync(
+                review.CustomerId,
+                "Phản hồi từ cửa hàng",
+                $"Cửa hàng đã phản hồi đánh giá của bạn: \"{dto.ReplyText}\".",
+                "Review"
+            );
+
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

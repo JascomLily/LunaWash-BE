@@ -37,5 +37,8 @@ namespace LunaWash.DAL.Entities
         public string? Comment { get; set; }
 
         public DateTime CreatedAt { get; set; }
+
+        [MaxLength(2000)]
+        public string? Reply { get; set; }
     }
 }
