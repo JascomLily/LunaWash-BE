@@ -20,32 +20,32 @@ END
 DECLARE @ConstraintName nvarchar(200);
 
 -- Drop constraint for Title
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'Title' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'Title' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'Title') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN Title;
 
 -- Drop constraint for RedirectUrl
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'RedirectUrl' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'RedirectUrl' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'RedirectUrl') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN RedirectUrl;
 
 -- Drop constraint for Position
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'Position' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'Position' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'Position') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN Position;
 
 -- Drop constraint for IsActive
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'IsActive' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'IsActive' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'IsActive') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN IsActive;
 
 -- Drop constraint for CreatedAt
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'CreatedAt' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'CreatedAt' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'CreatedAt') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN CreatedAt;
 
 -- Drop constraint for UpdatedAt
-SELECT @ConstraintName = Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'UpdatedAt' AND object_id = OBJECT_ID(N'dbo.Banners'));
+SET @ConstraintName = (SELECT Name FROM sys.default_constraints WHERE PARENT_OBJECT_ID = OBJECT_ID('dbo.Banners') AND PARENT_COLUMN_ID = (SELECT column_id FROM sys.columns WHERE NAME = N'UpdatedAt' AND object_id = OBJECT_ID(N'dbo.Banners')));
 IF @ConstraintName IS NOT NULL EXEC('ALTER TABLE dbo.Banners DROP CONSTRAINT ' + @ConstraintName);
 IF COL_LENGTH('dbo.Banners', 'UpdatedAt') IS NOT NULL ALTER TABLE dbo.Banners DROP COLUMN UpdatedAt;
 ");
