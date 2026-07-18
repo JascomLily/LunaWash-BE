@@ -58,6 +58,13 @@ namespace LunaWash.API.Controllers
             var tmnCode = !string.IsNullOrEmpty(settings?.VnpayTmnCode) ? settings.VnpayTmnCode : _configuration["VnPay:TmnCode"];
             var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
 
+            string? returnUrl = _configuration["VnPay:ReturnUrl"];
+            if (string.IsNullOrEmpty(returnUrl) || (returnUrl.Contains("localhost") && !HttpContext.Request.Host.Host.Contains("localhost")))
+            {
+                var request = HttpContext.Request;
+                returnUrl = $"{request.Scheme}://{request.Host}/api/Payment/vnpay-return";
+            }
+
             // 3. Config VNPAY
             var vnpay = new VnPayLibrary();
             vnpay.AddRequestData("vnp_Version", "2.1.0");
@@ -70,7 +77,7 @@ namespace LunaWash.API.Controllers
             vnpay.AddRequestData("vnp_Locale", "vn");
             vnpay.AddRequestData("vnp_OrderInfo", $"Thanh toan don hang {bookingId}");
             vnpay.AddRequestData("vnp_OrderType", "other"); // Loại hàng hóa
-            vnpay.AddRequestData("vnp_ReturnUrl", _configuration["VnPay:ReturnUrl"]!);
+            vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
             vnpay.AddRequestData("vnp_TxnRef", bookingId); // Mã tham chiếu (mã đơn hàng)
 
             var paymentUrl = vnpay.CreateRequestUrl(_configuration["VnPay:BaseUrl"]!, hashSecret!);
@@ -102,7 +109,7 @@ namespace LunaWash.API.Controllers
             var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
 
             bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, hashSecret!);
-            var frontendUrl = _configuration["VnPay:FrontendUrl"] ?? "http://localhost:5173";
+            var frontendUrl = _configuration["VnPay:FrontendUrl"] ?? _configuration["FRONTEND_URL"] ?? "http://localhost:5173";
 
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
             decimal bookingAmount = booking?.TotalPrice ?? 0;
