@@ -1,9 +1,9 @@
 using System;
-using System.Net;
-using System.Net.Mail;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using LunaWash.BLL.Interfaces;
+using MimeKit;
+using MailKit.Net.Smtp;
 
 namespace LunaWash.BLL.Services
 {
@@ -32,29 +32,29 @@ namespace LunaWash.BLL.Services
 
             int port = int.TryParse(portString, out int p) ? p : 587;
 
-            using (var client = new SmtpClient(smtpServer, port))
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(senderName, senderEmail));
+            message.To.Add(new MailboxAddress("", toEmail));
+            message.Subject = subject;
+
+            var bodyBuilder = new BodyBuilder { HtmlBody = body };
+            message.Body = bodyBuilder.ToMessageBody();
+
+            using (var client = new SmtpClient())
             {
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(senderEmail, password);
-                client.EnableSsl = true;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(senderEmail, senderName),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-
-                mailMessage.To.Add(toEmail);
-
                 try
                 {
-                    await client.SendMailAsync(mailMessage);
+                    // Forces IPv4 and better timeout handling for Docker on Render
+                    client.Timeout = 15000; // 15 seconds timeout
+                    
+                    await client.ConnectAsync(smtpServer, port, MailKit.Security.SecureSocketOptions.StartTls);
+                    await client.AuthenticateAsync(senderEmail, password);
+                    await client.SendAsync(message);
+                    await client.DisconnectAsync(true);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error sending email: " + ex.Message);
+                    Console.WriteLine("Error sending email via MailKit: " + ex.Message);
                     throw;
                 }
             }
