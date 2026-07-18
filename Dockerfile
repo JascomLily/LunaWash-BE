@@ -26,5 +26,8 @@ COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:10000
 EXPOSE 10000
 
+# Fix lỗi Segmentation Fault (Status 139) của .NET 10 trên Docker khi load config
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+
 # Lệnh khởi chạy Web API bằng file dll chính
 ENTRYPOINT ["dotnet", "LunaWash.API.dll"]
