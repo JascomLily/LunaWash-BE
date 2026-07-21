@@ -92,6 +92,13 @@ namespace LunaWash.API.Controllers
             var attendances = await _employeeService.GetAttendancesByBranchAndDateAsync(branchId, date);
             return Ok(attendances);
         }
+
+        [HttpGet("branch/{branchId}/weekly-leaves")]
+        public async Task<IActionResult> GetWeeklyLeaves(string branchId, [FromQuery] string date)
+        {
+            var leaves = await _employeeService.GetWeeklyLeavesByBranchAsync(branchId, date);
+            return Ok(leaves);
+        }
     }
 
     public class CheckInRequest

@@ -19,5 +19,6 @@ namespace LunaWash.BLL.Interfaces
         Task<bool> CheckInAsync(string employeeId, string branchId);
         Task<bool> CheckOutAsync(string employeeId);
         Task<IEnumerable<AttendanceResponseDto>> GetAttendancesByBranchAndDateAsync(string branchId, string date);
+        Task<IEnumerable<AttendanceResponseDto>> GetWeeklyLeavesByBranchAsync(string branchId, string date);
     }
 }
