@@ -133,5 +133,40 @@ namespace LunaWash.API.Controllers
                 return StatusCode(500, new { message = "Đã xảy ra lỗi khi lấy danh sách giờ trống.", details = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Request customer to confirm their arrival (called by Staff)
+        /// </summary>
+        [HttpPut("{id}/request-start")]
+        [AllowAnonymous] // Assuming staff authentication is handled or simplified for now
+        public async Task<IActionResult> RequestStart(string id)
+        {
+            var result = await _bookingService.RequestCustomerConfirmationAsync(id);
+            if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt." });
+            return Ok(new { message = "Đã gửi yêu cầu xác nhận đến khách hàng." });
+        }
+
+        /// <summary>
+        /// Customer confirms their arrival
+        /// </summary>
+        [HttpPut("{id}/confirm-ready")]
+        [AllowAnonymous] 
+        public async Task<IActionResult> ConfirmReady(string id)
+        {
+            var result = await _bookingService.ConfirmReadyAsync(id);
+            if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt." });
+            return Ok(new { message = "Đã xác nhận sẵn sàng." });
+        }
+
+        /// <summary>
+        /// Get the current confirmation status of a booking
+        /// </summary>
+        [HttpGet("{id}/status")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetConfirmationStatus(string id)
+        {
+            var status = await _bookingService.GetBookingConfirmationStatusAsync(id);
+            return Ok(new { isStartRequested = status.IsStartRequested, customerConfirmedReady = status.CustomerConfirmedReady });
+        }
     }
 }

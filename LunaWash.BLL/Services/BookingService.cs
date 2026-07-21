@@ -616,7 +616,9 @@ namespace LunaWash.BLL.Services
                     PaymentMethod = paymentMethod,
                     CustomerName = customerName,
                     BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
-                    CheckoutTime = b.CheckoutTime
+                    CheckoutTime = b.CheckoutTime,
+                    IsStartRequested = b.IsStartRequested,
+                    CustomerConfirmedReady = b.CustomerConfirmedReady
                 });
             }
 
@@ -871,7 +873,9 @@ namespace LunaWash.BLL.Services
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
                 CheckoutTime = b.CheckoutTime,
-                Rating = rating != -1 ? rating : null
+                Rating = rating != -1 ? rating : null,
+                IsStartRequested = b.IsStartRequested,
+                CustomerConfirmedReady = b.CustomerConfirmedReady
             };
         }
 
@@ -1061,6 +1065,40 @@ namespace LunaWash.BLL.Services
             await _context.SaveChangesAsync();
 
             return (true, "Đã thêm dịch vụ vệ sinh nội thất thành công.");
+        }
+
+        public async Task<bool> RequestCustomerConfirmationAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return false;
+
+            booking.IsStartRequested = true;
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ConfirmReadyAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return false;
+
+            booking.CustomerConfirmedReady = true;
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<(bool IsStartRequested, bool CustomerConfirmedReady)> GetBookingConfirmationStatusAsync(string bookingId)
+        {
+            var booking = await _context.Bookings
+                .AsNoTracking()
+                .Where(b => b.Id == bookingId && !b.IsDeleted)
+                .Select(b => new { b.IsStartRequested, b.CustomerConfirmedReady })
+                .FirstOrDefaultAsync();
+
+            if (booking == null) return (false, false);
+            return (booking.IsStartRequested, booking.CustomerConfirmedReady);
         }
     }
 }
