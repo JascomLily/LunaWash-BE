@@ -618,7 +618,8 @@ namespace LunaWash.BLL.Services
                     BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
                     CheckoutTime = b.CheckoutTime,
                     IsStartRequested = b.IsStartRequested,
-                    CustomerConfirmedReady = b.CustomerConfirmedReady
+                    CustomerConfirmedReady = b.CustomerConfirmedReady,
+                    UpdatedAt = b.UpdatedAt
                 });
             }
 
@@ -875,7 +876,8 @@ namespace LunaWash.BLL.Services
                 CheckoutTime = b.CheckoutTime,
                 Rating = rating != -1 ? rating : null,
                 IsStartRequested = b.IsStartRequested,
-                CustomerConfirmedReady = b.CustomerConfirmedReady
+                CustomerConfirmedReady = b.CustomerConfirmedReady,
+                UpdatedAt = b.UpdatedAt
             };
         }
 
