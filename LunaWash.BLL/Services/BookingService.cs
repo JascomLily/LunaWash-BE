@@ -641,8 +641,7 @@ namespace LunaWash.BLL.Services
             var bookings = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == targetDate 
-                         && !b.IsDeleted
-                         && b.Status != "Pending")
+                         && !b.IsDeleted)
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
 
