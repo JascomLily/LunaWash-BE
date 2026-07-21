@@ -24,6 +24,9 @@ namespace LunaWash.API.Controllers
             return User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         }
 
+        /// <summary>
+        /// Create a new booking when user books a wash
+        /// </summary>
         [HttpPost]
         [AllowAnonymous]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDTO dto)
@@ -50,6 +53,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get a list of time slots that are already booked
+        /// </summary>
         [HttpGet("occupied-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetOccupiedSlots([FromQuery] string date, [FromQuery] string washSlotId)
@@ -61,6 +67,9 @@ namespace LunaWash.API.Controllers
             return Ok(slots);
         }
 
+        /// <summary>
+        /// Get all past and current bookings of the logged-in user
+        /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {
@@ -71,6 +80,9 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
+        /// <summary>
+        /// Cancel a booking (soft delete, status becomes Canceled)
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelBooking(string id)
         {
@@ -83,6 +95,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Hủy lịch đặt thành công." });
         }
 
+        /// <summary>
+        /// Permanently delete a booking from the database
+        /// </summary>
         [HttpDelete("hard-delete/{id}")]
         public async Task<IActionResult> HardDeleteBooking(string id)
         {
@@ -95,6 +110,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Đã xóa bỏ lịch đặt hoàn toàn." });
         }
 
+        /// <summary>
+        /// Find free time slots for a specific branch and date
+        /// </summary>
         [HttpGet("available-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string branchId, [FromQuery] string date)

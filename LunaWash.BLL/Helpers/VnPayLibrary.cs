@@ -15,6 +15,9 @@ namespace LunaWash.BLL.Helpers
         private SortedList<string, string> _requestData = new SortedList<string, string>(new VnPayCompare());
         private SortedList<string, string> _responseData = new SortedList<string, string>(new VnPayCompare());
 
+        /// <summary>
+        /// Add data to send to VNPAY
+        /// </summary>
         public void AddRequestData(string key, string value)
         {
             if (!string.IsNullOrEmpty(value))
@@ -23,6 +26,9 @@ namespace LunaWash.BLL.Helpers
             }
         }
 
+        /// <summary>
+        /// Add data received from VNPAY
+        /// </summary>
         public void AddResponseData(string key, string value)
         {
             if (!string.IsNullOrEmpty(value))
@@ -31,11 +37,17 @@ namespace LunaWash.BLL.Helpers
             }
         }
 
+        /// <summary>
+        /// Get a specific value received from VNPAY
+        /// </summary>
         public string GetResponseData(string key)
         {
             return _responseData.TryGetValue(key, out var retValue) ? retValue : string.Empty;
         }
 
+        /// <summary>
+        /// Create the final URL to redirect the user to VNPAY payment page
+        /// </summary>
         public string CreateRequestUrl(string baseUrl, string vnp_HashSecret)
         {
             var data = new StringBuilder();
@@ -59,6 +71,9 @@ namespace LunaWash.BLL.Helpers
             return baseUrl;
         }
 
+        /// <summary>
+        /// Check if the data from VNPAY is valid and safe
+        /// </summary>
         public bool ValidateSignature(string inputHash, string secretKey)
         {
             var rspRaw = GetResponseData();
@@ -106,6 +121,9 @@ namespace LunaWash.BLL.Helpers
 
     public class Utils
     {
+        /// <summary>
+        /// Create a secure hash code (SHA512) to protect data
+        /// </summary>
         public static string HmacSHA512(string key, string inputData)
         {
             var hash = new StringBuilder();
