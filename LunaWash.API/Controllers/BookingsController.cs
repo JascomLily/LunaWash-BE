@@ -24,6 +24,9 @@ namespace LunaWash.API.Controllers
             return User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         }
 
+        /// <summary>
+        /// Create a new booking when user books a wash
+        /// </summary>
         [HttpPost]
         [AllowAnonymous]
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDTO dto)
@@ -50,6 +53,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Get a list of time slots that are already booked
+        /// </summary>
         [HttpGet("occupied-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetOccupiedSlots([FromQuery] string date, [FromQuery] string washSlotId)
@@ -61,6 +67,9 @@ namespace LunaWash.API.Controllers
             return Ok(slots);
         }
 
+        /// <summary>
+        /// Get all past and current bookings of the logged-in user
+        /// </summary>
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {
@@ -71,6 +80,9 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
+        /// <summary>
+        /// Cancel a booking (soft delete, status becomes Canceled)
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelBooking(string id)
         {
@@ -83,6 +95,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Hủy lịch đặt thành công." });
         }
 
+        /// <summary>
+        /// Permanently delete a booking from the database
+        /// </summary>
         [HttpDelete("hard-delete/{id}")]
         public async Task<IActionResult> HardDeleteBooking(string id)
         {
@@ -95,6 +110,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Đã xóa bỏ lịch đặt hoàn toàn." });
         }
 
+        /// <summary>
+        /// Find free time slots for a specific branch and date
+        /// </summary>
         [HttpGet("available-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string branchId, [FromQuery] string date)
@@ -114,6 +132,41 @@ namespace LunaWash.API.Controllers
             {
                 return StatusCode(500, new { message = "Đã xảy ra lỗi khi lấy danh sách giờ trống.", details = ex.Message });
             }
+        }
+
+        /// <summary>
+        /// Request customer to confirm their arrival (called by Staff)
+        /// </summary>
+        [HttpPut("{id}/request-start")]
+        [AllowAnonymous] // Assuming staff authentication is handled or simplified for now
+        public async Task<IActionResult> RequestStart(string id)
+        {
+            var result = await _bookingService.RequestCustomerConfirmationAsync(id);
+            if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt." });
+            return Ok(new { message = "Đã gửi yêu cầu xác nhận đến khách hàng." });
+        }
+
+        /// <summary>
+        /// Customer confirms their arrival
+        /// </summary>
+        [HttpPut("{id}/confirm-ready")]
+        [AllowAnonymous] 
+        public async Task<IActionResult> ConfirmReady(string id)
+        {
+            var result = await _bookingService.ConfirmReadyAsync(id);
+            if (!result) return NotFound(new { message = "Không tìm thấy lịch đặt." });
+            return Ok(new { message = "Đã xác nhận sẵn sàng." });
+        }
+
+        /// <summary>
+        /// Get the current confirmation status of a booking
+        /// </summary>
+        [HttpGet("{id}/status")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetConfirmationStatus(string id)
+        {
+            var status = await _bookingService.GetBookingConfirmationStatusAsync(id);
+            return Ok(new { isStartRequested = status.IsStartRequested, customerConfirmedReady = status.CustomerConfirmedReady });
         }
     }
 }

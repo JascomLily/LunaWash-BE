@@ -46,6 +46,8 @@ namespace LunaWash.BLL.DTOs
         public DateTime BookingDate { get; set; }
         public DateTime? CheckoutTime { get; set; }
         public double? Rating { get; set; }
+        public bool IsStartRequested { get; set; }
+        public bool CustomerConfirmedReady { get; set; }
     }
     public class UpdateBookingStatusDTO
     {

@@ -30,6 +30,9 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
+        /// <summary>
+        /// Create a VNPAY payment link for a specific booking
+        /// </summary>
         [HttpPost("create-vnpay-url/{bookingId}")]
         public async Task<IActionResult> CreateVnPayUrl(string bookingId)
         {
@@ -87,6 +90,9 @@ namespace LunaWash.API.Controllers
 
         // VNPAY SẼ REDIRECT VỀ ĐÂY SAU KHI KHÁCH THANH TOÁN
         [AllowAnonymous]
+        /// <summary>
+        /// Handle the return request from VNPAY after user pays
+        /// </summary>
         [HttpGet("vnpay-return")]
         public async Task<IActionResult> VnPayReturn()
         {

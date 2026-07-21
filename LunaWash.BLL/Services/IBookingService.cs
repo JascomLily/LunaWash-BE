@@ -18,5 +18,10 @@ namespace LunaWash.BLL.Services
         Task<(bool Success, string Message)> AddInteriorCleaningAsync(string bookingId);
 
         Task<IEnumerable<string>> GetAvailableTimeSlotsAsync(string branchId, DateOnly date);
+
+        // New confirmation flow methods
+        Task<bool> RequestCustomerConfirmationAsync(string bookingId);
+        Task<bool> ConfirmReadyAsync(string bookingId);
+        Task<(bool IsStartRequested, bool CustomerConfirmedReady)> GetBookingConfirmationStatusAsync(string bookingId);
     }
 }

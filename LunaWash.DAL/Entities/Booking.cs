@@ -39,6 +39,10 @@ public partial class Booking
 
     public bool IsDeleted { get; set; }
 
+    public bool IsStartRequested { get; set; } = false;
+
+    public bool CustomerConfirmedReady { get; set; } = false;
+
     public virtual Branch Branch { get; set; } = null!;
 
     public virtual ServiceReview? ServiceReview { get; set; }
