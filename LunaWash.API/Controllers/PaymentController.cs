@@ -65,7 +65,22 @@ namespace LunaWash.API.Controllers
             if (string.IsNullOrEmpty(returnUrl) || (returnUrl.Contains("localhost") && !HttpContext.Request.Host.Host.Contains("localhost")))
             {
                 var request = HttpContext.Request;
-                returnUrl = $"{request.Scheme}://{request.Host}/api/Payment/vnpay-return";
+                returnUrl = $"{request.Scheme}://{request.Host}/api/Payments/vnpay-return";
+            }
+
+            string origin = HttpContext.Request.Headers["Origin"].ToString();
+            if (string.IsNullOrEmpty(origin))
+            {
+                origin = HttpContext.Request.Headers["Referer"].ToString();
+                if (!string.IsNullOrEmpty(origin) && origin.EndsWith("/"))
+                {
+                    origin = origin.Substring(0, origin.Length - 1);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(origin))
+            {
+                returnUrl += $"?feUrl={Uri.EscapeDataString(origin)}";
             }
 
             // 3. Config VNPAY
@@ -111,11 +126,12 @@ namespace LunaWash.API.Controllers
             string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
             string vnp_SecureHash = Request.Query["vnp_SecureHash"].ToString();
 
+            string? feUrl = Request.Query["feUrl"];
             var settings = await _settingsService.GetPaymentSettingsAsync();
             var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
 
             bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, hashSecret!);
-            var frontendUrl = _configuration["VnPay:FrontendUrl"] ?? _configuration["FRONTEND_URL"] ?? "http://localhost:5173";
+            var frontendUrl = feUrl ?? _configuration["VnPay:FrontendUrl"] ?? _configuration["FRONTEND_URL"] ?? "http://localhost:5173";
 
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
             decimal bookingAmount = booking?.TotalPrice ?? 0;
