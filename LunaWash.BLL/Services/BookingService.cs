@@ -67,7 +67,7 @@ namespace LunaWash.BLL.Services
 
                 var busySlotIds = await _context.Bookings
                     .Where(b => b.BranchId == dto.BranchId
-                             && b.Status != "Cancelled" 
+                             && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
                              && !b.IsDeleted
                              && b.ScheduledStartTime < endTime 
                              && b.ScheduledEndTime > startTime)
@@ -455,7 +455,7 @@ namespace LunaWash.BLL.Services
             if (!DateOnly.TryParse(date, out var bookingDate)) return new List<OccupiedSlotDTO>();
 
             var bookings = await _context.Bookings
-                .Where(b => b.BookingDate == bookingDate && b.WashSlotId == washSlotId && b.Status != "Cancelled" && b.IsDeleted == false)
+                .Where(b => b.BookingDate == bookingDate && b.WashSlotId == washSlotId && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ" && b.IsDeleted == false)
                 .Select(b => new OccupiedSlotDTO
                 {
                     StartTime = b.ScheduledStartTime,
@@ -548,7 +548,7 @@ namespace LunaWash.BLL.Services
             var bookings = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && !b.IsDeleted
-                         && (b.Status == "Completed" || b.Status == "Cancelled"))
+                         && (b.Status == "Completed" || b.Status == "Cancelled" || b.Status == "Hủy vì quá hạn chờ"))
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -612,7 +612,7 @@ namespace LunaWash.BLL.Services
                     SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
                     TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)}",
                     TotalPrice = b.TotalPrice.ToString("N0") + "đ",
-                    Status = b.Status == "Cancelled" ? "Đã hủy" : "Hoàn thành",
+                    Status = b.Status == "Cancelled" ? "Đã hủy" : (b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" : "Hoàn thành"),
                     PaymentMethod = paymentMethod,
                     CustomerName = customerName,
                     BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
@@ -644,6 +644,19 @@ namespace LunaWash.BLL.Services
                          && !b.IsDeleted)
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
+
+            var currentTimeVn = DateTime.UtcNow.AddHours(7);
+            bool isModified = false;
+            foreach (var b in bookings)
+            {
+                if (b.Status == "Pending" && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                {
+                    b.Status = "Hủy vì quá hạn chờ";
+                    b.UpdatedAt = DateTime.UtcNow;
+                    isModified = true;
+                }
+            }
+            if (isModified) await _context.SaveChangesAsync();
 
             var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
             var vehicles = await _context.CustomerVehicles
@@ -867,6 +880,7 @@ namespace LunaWash.BLL.Services
                 TimeRange = $"{timeRange}\n{b.ScheduledStartTime:dd/MM/yyyy}",
                 TotalPrice = totalPrice,
                 Status = b.Status == "Cancelled" ? "Đã hủy" : 
+                         b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" :
                          b.Status == "Completed" ? "Hoàn thành" : 
                          (b.Status == "Washing" || b.Status == "Checked-In") ? "Đang rửa" : 
                          "Sắp đến",
@@ -900,7 +914,7 @@ namespace LunaWash.BLL.Services
             var bookingsOnDate = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == date 
-                         && b.Status != "Cancelled" 
+                         && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
                          && !b.IsDeleted)
                 .ToListAsync();
 
@@ -1020,7 +1034,7 @@ namespace LunaWash.BLL.Services
             var overlappingCount = await _context.Bookings
                 .Where(b => b.WashSlotId == booking.WashSlotId
                          && b.BookingDate == booking.BookingDate
-                         && b.Status != "Cancelled"
+                         && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
                          && !b.IsDeleted
                          && b.Id != booking.Id
                          && b.ScheduledStartTime < newEndTime
