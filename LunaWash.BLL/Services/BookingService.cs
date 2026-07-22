@@ -67,7 +67,7 @@ namespace LunaWash.BLL.Services
 
                 var busySlotIds = await _context.Bookings
                     .Where(b => b.BranchId == dto.BranchId
-                             && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
+                             && b.Status != "Cancelled"
                              && !b.IsDeleted
                              && b.ScheduledStartTime < endTime 
                              && b.ScheduledEndTime > startTime)
@@ -427,6 +427,23 @@ namespace LunaWash.BLL.Services
 
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
+            var bookingsToUpdate = await _context.Bookings
+                .Where(b => b.CustomerId == userId && b.Status == "Confirmed" && !b.IsDeleted)
+                .ToListAsync();
+            
+            var currentTimeVn = DateTime.UtcNow.AddHours(7);
+            bool isModified = false;
+            foreach (var b in bookingsToUpdate)
+            {
+                if (currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                {
+                    b.Status = "Hủy vì quá hạn chờ";
+                    b.UpdatedAt = DateTime.UtcNow;
+                    isModified = true;
+                }
+            }
+            if (isModified) await _context.SaveChangesAsync();
+
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
                 .Where(b => b.CustomerId == userId && b.Status != "Pending")
@@ -455,7 +472,7 @@ namespace LunaWash.BLL.Services
             if (!DateOnly.TryParse(date, out var bookingDate)) return new List<OccupiedSlotDTO>();
 
             var bookings = await _context.Bookings
-                .Where(b => b.BookingDate == bookingDate && b.WashSlotId == washSlotId && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ" && b.IsDeleted == false)
+                .Where(b => b.BookingDate == bookingDate && b.WashSlotId == washSlotId && b.Status != "Cancelled" && b.IsDeleted == false)
                 .Select(b => new OccupiedSlotDTO
                 {
                     StartTime = b.ScheduledStartTime,
@@ -649,7 +666,7 @@ namespace LunaWash.BLL.Services
             bool isModified = false;
             foreach (var b in bookings)
             {
-                if (b.Status == "Pending" && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                if (b.Status == "Confirmed" && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
                 {
                     b.Status = "Hủy vì quá hạn chờ";
                     b.UpdatedAt = DateTime.UtcNow;
@@ -914,7 +931,7 @@ namespace LunaWash.BLL.Services
             var bookingsOnDate = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == date 
-                         && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
+                         && b.Status != "Cancelled"
                          && !b.IsDeleted)
                 .ToListAsync();
 
@@ -1034,7 +1051,7 @@ namespace LunaWash.BLL.Services
             var overlappingCount = await _context.Bookings
                 .Where(b => b.WashSlotId == booking.WashSlotId
                          && b.BookingDate == booking.BookingDate
-                         && b.Status != "Cancelled" && b.Status != "Hủy vì quá hạn chờ"
+                         && b.Status != "Cancelled"
                          && !b.IsDeleted
                          && b.Id != booking.Id
                          && b.ScheduledStartTime < newEndTime
