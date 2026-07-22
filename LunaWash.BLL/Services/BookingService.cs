@@ -212,18 +212,25 @@ namespace LunaWash.BLL.Services
                 }
 
                 string parsedPaymentMethod = "tien-mat";
-                if (dto.Notes != null)
+                if (!string.IsNullOrEmpty(dto.Notes))
                 {
-                    try
+                    if (dto.Notes.Trim().Equals("VNPay", StringComparison.OrdinalIgnoreCase))
                     {
-                        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                        var doc = JsonDocument.Parse(dto.Notes);
-                        if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
-                        {
-                            parsedPaymentMethod = pm.GetString() ?? "tien-mat";
-                        }
+                        parsedPaymentMethod = "vnpay";
                     }
-                    catch { }
+                    else
+                    {
+                        try
+                        {
+                            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                            var doc = JsonDocument.Parse(dto.Notes);
+                            if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
+                            {
+                                parsedPaymentMethod = pm.GetString() ?? "tien-mat";
+                            }
+                        }
+                        catch { }
+                    }
                 }
 
                 string paymentMethod = parsedPaymentMethod;

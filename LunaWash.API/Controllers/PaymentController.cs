@@ -157,10 +157,20 @@ namespace LunaWash.API.Controllers
                 }
                 else
                 {
+                    if (booking != null && booking.Status == "Pending")
+                    {
+                        booking.Status = "Cancelled";
+                        await _context.SaveChangesAsync();
+                    }
                     return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode={vnp_ResponseCode}&amount={bookingAmount}");
                 }
             }
 
+            if (booking != null && booking.Status == "Pending")
+            {
+                booking.Status = "Cancelled";
+                await _context.SaveChangesAsync();
+            }
             return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode=InvalidSignature&amount={bookingAmount}");
         }
     }
