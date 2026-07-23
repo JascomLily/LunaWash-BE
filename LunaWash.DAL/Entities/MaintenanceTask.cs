@@ -25,6 +25,18 @@ namespace LunaWash.DAL.Entities
         [StringLength(50)]
         public string Status { get; set; } = "Chưa làm"; // Chưa làm, Đang làm, Hoàn thành, Trễ hạn
 
+        [StringLength(50)]
+        public string Priority { get; set; } = "Medium"; // High, Medium, Low
+
+        [StringLength(1000)]
+        public string? ReviewNote { get; set; }
+
+        [StringLength(50)]
+        public string? AssigneeId { get; set; }
+
+        [StringLength(50)]
+        public string? IncidentReportId { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
@@ -33,5 +45,11 @@ namespace LunaWash.DAL.Entities
         
         [ForeignKey("BranchId")]
         public virtual Branch Branch { get; set; } = null!;
+
+        [ForeignKey("AssigneeId")]
+        public virtual User? Assignee { get; set; }
+
+        [ForeignKey("IncidentReportId")]
+        public virtual IncidentReport? IncidentReport { get; set; }
     }
 }

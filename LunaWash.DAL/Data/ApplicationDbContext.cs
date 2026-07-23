@@ -74,6 +74,7 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Notification> Notifications { get; set; }
     public virtual DbSet<StaffSchedule> StaffSchedules { get; set; }
     public virtual DbSet<ScheduleHistoryLog> ScheduleHistoryLogs { get; set; }
+    public virtual DbSet<IncidentReport> IncidentReports { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
