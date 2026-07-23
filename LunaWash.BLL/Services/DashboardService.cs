@@ -126,5 +126,85 @@ namespace LunaWash.BLL.Services
 
             return overview;
         }
+
+        public async Task<BranchRevenueOverviewDto> GetBranchRevenueOverviewAsync(string branchId, string period, DateTime? referenceDate)
+        {
+            var overview = new BranchRevenueOverviewDto();
+            var refDate = referenceDate ?? DateTime.UtcNow;
+            
+            var localRefDate = TimeZoneInfo.ConvertTimeFromUtc(refDate, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+            var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+            var allBookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId && (b.Status == "Completed" || b.Status == "Paid"))
+                .ToListAsync();
+
+            overview.TodayRevenue = allBookings
+                .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == localToday.Date)
+                .Sum(b => b.TotalPrice);
+
+            var startOfThisWeek = localToday.Date.AddDays(-(int)localToday.DayOfWeek + (int)DayOfWeek.Monday);
+            if (localToday.DayOfWeek == DayOfWeek.Sunday) startOfThisWeek = startOfThisWeek.AddDays(-7);
+            
+            overview.ThisWeekRevenue = allBookings
+                .Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate >= startOfThisWeek && bDate <= localToday.Date;
+                }).Sum(b => b.TotalPrice);
+
+            overview.ThisMonthRevenue = allBookings
+                .Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate.Month == localToday.Month && bDate.Year == localToday.Year;
+                }).Sum(b => b.TotalPrice);
+
+            var chartStartDate = localRefDate.Date;
+            var chartEndDate = localRefDate.Date;
+            
+            if (period == "month") {
+                chartStartDate = new DateTime(localRefDate.Year, localRefDate.Month, 1);
+                chartEndDate = chartStartDate.AddMonths(1).AddDays(-1);
+                overview.CurrentPeriodLabel = $"Tháng {localRefDate.Month}/{localRefDate.Year}";
+            } else {
+                // week
+                chartStartDate = localRefDate.Date.AddDays(-(int)localRefDate.DayOfWeek + (int)DayOfWeek.Monday);
+                if (localRefDate.DayOfWeek == DayOfWeek.Sunday) chartStartDate = chartStartDate.AddDays(-7);
+                chartEndDate = chartStartDate.AddDays(6);
+                overview.CurrentPeriodLabel = $"Tuần {chartStartDate:dd/MM} - {chartEndDate:dd/MM}";
+            }
+
+            var periodBookings = allBookings.Where(b => {
+                var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                return bDate >= chartStartDate && bDate <= chartEndDate;
+            }).ToList();
+
+            for (var dt = chartStartDate; dt <= chartEndDate; dt = dt.AddDays(1)) {
+                var dayBookings = periodBookings.Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate == dt.Date;
+                }).ToList();
+
+                var revenue = dayBookings.Sum(b => b.TotalPrice);
+                var count = dayBookings.Count;
+
+                overview.ChartData.Add(new RevenueDataPointDto {
+                    Label = period == "month" ? dt.Day.ToString() : (dt.DayOfWeek == DayOfWeek.Sunday ? "CN" : "T" + ((int)dt.DayOfWeek + 1)),
+                    Revenue = revenue,
+                    BookingsCount = count,
+                    FullDate = dt.ToString("yyyy-MM-dd")
+                });
+
+                if (count > 0) {
+                    overview.Details.Add(new RevenueDetailDto {
+                        Date = dt.ToString("dd/MM/yyyy"),
+                        TotalBookings = count,
+                        TotalRevenue = revenue
+                    });
+                }
+            }
+
+            overview.Details = overview.Details.OrderByDescending(d => DateTime.ParseExact(d.Date, "dd/MM/yyyy", null)).ToList();
+            return overview;
+        }
     }
 }

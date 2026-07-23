@@ -6,6 +6,7 @@ namespace LunaWash.BLL.Interfaces
     public interface IDashboardService
     {
         Task<DashboardOverviewDto> GetOverviewAsync();
+        Task<BranchRevenueOverviewDto> GetBranchRevenueOverviewAsync(string branchId, string period, System.DateTime? referenceDate);
     }
 
     public class DashboardOverviewDto
@@ -44,5 +45,30 @@ namespace LunaWash.BLL.Interfaces
         public decimal Amount { get; set; }
         public string Status { get; set; } = null!;
         public string Date { get; set; } = null!;
+    }
+
+    public class BranchRevenueOverviewDto
+    {
+        public decimal TodayRevenue { get; set; }
+        public decimal ThisWeekRevenue { get; set; }
+        public decimal ThisMonthRevenue { get; set; }
+        public string CurrentPeriodLabel { get; set; } = null!;
+        public List<RevenueDataPointDto> ChartData { get; set; } = new List<RevenueDataPointDto>();
+        public List<RevenueDetailDto> Details { get; set; } = new List<RevenueDetailDto>();
+    }
+
+    public class RevenueDataPointDto
+    {
+        public string Label { get; set; } = null!; // E.g., "Thứ 2" or "Tuần 1"
+        public decimal Revenue { get; set; }
+        public int BookingsCount { get; set; }
+        public string FullDate { get; set; } = null!;
+    }
+
+    public class RevenueDetailDto
+    {
+        public string Date { get; set; } = null!;
+        public int TotalBookings { get; set; }
+        public decimal TotalRevenue { get; set; }
     }
 }
