@@ -1,8 +1,10 @@
+using System.Linq;
 using System.Threading.Tasks;
 using LunaWash.BLL.DTOs;
 using LunaWash.BLL.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LunaWash.API.Controllers
 {
@@ -12,17 +14,34 @@ namespace LunaWash.API.Controllers
     public class EquipmentsController : ControllerBase
     {
         private readonly IEquipmentService _equipmentService;
+        private readonly LunaWash.DAL.Data.ApplicationDbContext _context;
 
-        public EquipmentsController(IEquipmentService equipmentService)
+        public EquipmentsController(IEquipmentService equipmentService, LunaWash.DAL.Data.ApplicationDbContext context)
         {
             _equipmentService = equipmentService;
+            _context = context;
         }
 
         [HttpGet("branch/{branchId}")]
-        public async Task<IActionResult> GetDashboard(string branchId)
+        public async Task<IActionResult> GetDashboard(string branchId, [FromQuery] string? washSlotId = null)
         {
-            var result = await _equipmentService.GetDashboardAsync(branchId);
+            var result = await _equipmentService.GetDashboardAsync(branchId, washSlotId);
             return Ok(result);
+        }
+
+        [HttpGet("branch/{branchId}/slots")]
+        public async Task<IActionResult> GetWashSlots(string branchId)
+        {
+            var slots = await _context.WashSlots
+                .Where(s => s.BranchId == branchId && !s.IsDeleted)
+                .OrderBy(s => s.SlotNumber)
+                .Select(s => new {
+                    id = s.Id,
+                    name = "Trạm " + s.SlotNumber,
+                    status = s.Status
+                })
+                .ToListAsync();
+            return Ok(slots);
         }
 
         [HttpPut("{id}/status")]
@@ -84,27 +103,38 @@ namespace LunaWash.API.Controllers
         [HttpPost("seed")]
         public async Task<IActionResult> Seed([FromQuery] string branchId, [FromServices] LunaWash.DAL.Data.ApplicationDbContext context)
         {
-            if (!context.Equipments.Any(e => e.BranchId == branchId))
-            {
-                var eqs = new[] {
-                    new LunaWash.DAL.Entities.Equipment { Id = "EQ-001", BranchId = branchId, Name = "Máy rửa tự động 01", Category = "Máy rửa chính", Status = "Hoạt động", Priority = "Bình thường", LastMaintenance = "01/06/2026", NextMaintenance = "08/06/2026" },
-                    new LunaWash.DAL.Entities.Equipment { Id = "EQ-002", BranchId = branchId, Name = "Máy bơm áp lực cao", Category = "Bơm nước", Status = "Cần kiểm tra", Priority = "Cao", LastMaintenance = "30/05/2026", NextMaintenance = "Hôm nay" },
-                    new LunaWash.DAL.Entities.Equipment { Id = "EQ-003", BranchId = branchId, Name = "Cảm biến nhận diện xe", Category = "Cảm biến", Status = "Lỗi", Priority = "Khẩn cấp", LastMaintenance = "05/06/2026", NextMaintenance = "Ngay lập tức" },
-                    new LunaWash.DAL.Entities.Equipment { Id = "EQ-004", BranchId = branchId, Name = "Hệ thống phun bọt", Category = "Hóa chất", Status = "Đang bảo trì", Priority = "Trung bình", LastMaintenance = "03/06/2026", NextMaintenance = "10/06/2026" },
-                    new LunaWash.DAL.Entities.Equipment { Id = "EQ-005", BranchId = branchId, Name = "Máy sấy / quạt thổi khô", Category = "Sấy khô", Status = "Hoạt động", Priority = "Bình thường", LastMaintenance = "02/06/2026", NextMaintenance = "09/06/2026" }
-                };
-                context.Equipments.AddRange(eqs);
+            // Clear existing data for this branch to generate a fresh professional demo
+            var oldTasks = context.MaintenanceTasks.Where(t => t.BranchId == branchId).ToList();
+            context.MaintenanceTasks.RemoveRange(oldTasks);
+            await context.SaveChangesAsync(); // Delete tasks first because they reference Equipments and IncidentReports
 
-                var tasks = new[] {
-                    new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-001", BranchId = branchId, EquipmentId = "EQ-002", TaskName = "Kiểm tra máy bơm", Status = "Đang làm" },
-                    new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-002", BranchId = branchId, EquipmentId = "EQ-004", TaskName = "Vệ sinh đầu phun", Status = "Chưa làm" },
-                    new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-003", BranchId = branchId, EquipmentId = "EQ-003", TaskName = "Cảm biến nhận diện", Status = "Trễ hạn" },
-                    new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-004", BranchId = branchId, EquipmentId = "EQ-001", TaskName = "Kiểm tra hóa chất", Status = "Hoàn thành" }
-                };
-                context.MaintenanceTasks.AddRange(tasks);
-                await context.SaveChangesAsync();
-            }
-            return Ok();
+            var oldIncidents = context.IncidentReports.Where(i => i.BranchId == branchId).ToList();
+            context.IncidentReports.RemoveRange(oldIncidents);
+            await context.SaveChangesAsync(); // Delete incidents next because they reference Equipments
+            
+            var oldEqs = context.Equipments.Where(e => e.BranchId == branchId).ToList();
+            context.Equipments.RemoveRange(oldEqs);
+            await context.SaveChangesAsync(); // Now we can safely delete equipments
+
+            var eqs = new[] {
+                new LunaWash.DAL.Entities.Equipment { Id = "EQ-001", BranchId = branchId, Name = "Máy rửa tự động 01", Category = "Máy rửa chính", Status = "Hoạt động", Priority = "Bình thường", LastMaintenance = "01/06/2026", NextMaintenance = "08/06/2026" },
+                new LunaWash.DAL.Entities.Equipment { Id = "EQ-002", BranchId = branchId, Name = "Máy bơm áp lực cao", Category = "Bơm nước", Status = "Cần kiểm tra", Priority = "Cao", LastMaintenance = "30/05/2026", NextMaintenance = "Hôm nay" },
+                new LunaWash.DAL.Entities.Equipment { Id = "EQ-003", BranchId = branchId, Name = "Cảm biến nhận diện xe", Category = "Cảm biến", Status = "Lỗi", Priority = "Khẩn cấp", LastMaintenance = "05/06/2026", NextMaintenance = "Ngay lập tức" },
+                new LunaWash.DAL.Entities.Equipment { Id = "EQ-004", BranchId = branchId, Name = "Hệ thống phun bọt", Category = "Hóa chất", Status = "Đang bảo trì", Priority = "Trung bình", LastMaintenance = "03/06/2026", NextMaintenance = "10/06/2026" },
+                new LunaWash.DAL.Entities.Equipment { Id = "EQ-005", BranchId = branchId, Name = "Máy sấy / quạt thổi khô", Category = "Sấy khô", Status = "Hoạt động", Priority = "Bình thường", LastMaintenance = "02/06/2026", NextMaintenance = "09/06/2026" }
+            };
+            context.Equipments.AddRange(eqs);
+            await context.SaveChangesAsync();
+
+            var tasks = new[] {
+                new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-001", BranchId = branchId, EquipmentId = "EQ-002", TaskName = "Kiểm tra máy bơm", Status = "Đang làm" },
+                new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-002", BranchId = branchId, EquipmentId = "EQ-004", TaskName = "Vệ sinh đầu phun", Status = "Chưa làm" },
+                new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-003", BranchId = branchId, EquipmentId = "EQ-003", TaskName = "Cảm biến nhận diện", Status = "Trễ hạn" },
+                new LunaWash.DAL.Entities.MaintenanceTask { Id = "T-004", BranchId = branchId, EquipmentId = "EQ-001", TaskName = "Kiểm tra hóa chất", Status = "Hoàn thành" }
+            };
+            context.MaintenanceTasks.AddRange(tasks);
+            await context.SaveChangesAsync();
+            return Ok(new { message = "Seeded original demo data for branch " + branchId });
         }
     }
 }

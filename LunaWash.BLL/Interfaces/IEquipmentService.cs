@@ -5,7 +5,7 @@ namespace LunaWash.BLL.Interfaces
 {
     public interface IEquipmentService
     {
-        Task<EquipmentDashboardDTO> GetDashboardAsync(string branchId);
+        Task<EquipmentDashboardDTO> GetDashboardAsync(string branchId, string? washSlotId = null);
         Task<bool> UpdateEquipmentStatusAsync(string equipmentId, string branchId, string status);
         Task<bool> UpdateEquipmentScheduleAsync(string equipmentId, string branchId, string nextMaintenance);
         Task<bool> UpdateEquipmentPriorityAsync(string equipmentId, string branchId, string priority);
