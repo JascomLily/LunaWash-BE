@@ -56,7 +56,7 @@ namespace LunaWash.API.BackgroundServices
 
             // Lấy danh sách booking quá hạn
             var expiredBookings = await context.Bookings
-                .Where(b => b.Status == "Pending" && b.CreatedAt < thresholdTime)
+                .Where(b => b.Status == "Pending" && b.CreatedAt < thresholdTime && b.Notes != null && b.Notes.Contains("vnpay"))
                 .ToListAsync(cancellationToken);
 
             if (!expiredBookings.Any())
@@ -64,7 +64,7 @@ namespace LunaWash.API.BackgroundServices
                 return;
             }
 
-            _logger.LogInformation($"Found {expiredBookings.Count} expired 'Pending' bookings. Initiating Hard Delete...");
+            _logger.LogInformation($"Found {expiredBookings.Count} expired 'Pending' VNPay bookings. Initiating Hard Delete...");
 
             foreach (var booking in expiredBookings)
             {
@@ -108,12 +108,12 @@ namespace LunaWash.API.BackgroundServices
                     context.PointHistories.RemoveRange(pointHistories);
                 }
 
-                // 2. Xóa Booking (Tối ưu Database)
+                // 2. Xóa Booking (Hard Delete)
                 context.Bookings.Remove(booking);
             }
 
             await context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation($"Successfully cleaned up {expiredBookings.Count} expired 'Pending' bookings.");
+            _logger.LogInformation("Successfully hard deleted expired 'Pending' VNPay bookings.");
         }
 
         private async Task SendUpcomingBookingNotificationsAsync(CancellationToken cancellationToken)
@@ -127,7 +127,7 @@ namespace LunaWash.API.BackgroundServices
 
             var upcomingBookings = await context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.Status == "Confirmed" && b.ScheduledStartTime > nowVn && b.ScheduledStartTime <= threshold)
+                .Where(b => (b.Status == "Confirmed" || b.Status == "Pending") && b.ScheduledStartTime > nowVn && b.ScheduledStartTime <= threshold)
                 .ToListAsync(cancellationToken);
 
             if (!upcomingBookings.Any()) return;
