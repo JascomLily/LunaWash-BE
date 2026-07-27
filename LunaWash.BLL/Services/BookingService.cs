@@ -301,7 +301,7 @@ namespace LunaWash.BLL.Services
                     VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                     ScheduledStartTime = startTime,
                     ScheduledEndTime = endTime,
-                    Status = paymentMethod == "vnpay" ? "Pending" : "Confirmed",
+                    Status = "Pending",
                     WashSlotId = dbSlotId,
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
@@ -435,7 +435,7 @@ namespace LunaWash.BLL.Services
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
             var bookingsToUpdate = await _context.Bookings
-                .Where(b => b.CustomerId == userId && b.Status == "Confirmed" && !b.IsDeleted)
+                .Where(b => b.CustomerId == userId && (b.Status == "Confirmed" || b.Status == "Pending") && !b.IsDeleted)
                 .ToListAsync();
             
             var currentTimeVn = DateTime.UtcNow.AddHours(7);
@@ -453,7 +453,7 @@ namespace LunaWash.BLL.Services
 
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.CustomerId == userId && b.Status != "Pending")
+                .Where(b => b.CustomerId == userId)
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -673,7 +673,7 @@ namespace LunaWash.BLL.Services
             bool isModified = false;
             foreach (var b in bookings)
             {
-                if (b.Status == "Confirmed" && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                if ((b.Status == "Confirmed" || b.Status == "Pending") && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
                 {
                     b.Status = "Hủy vì quá hạn chờ";
                     b.UpdatedAt = DateTime.UtcNow;

@@ -23,7 +23,7 @@ namespace LunaWash.BLL.Services
 
             // Total Bookings & Revenue
             var completedBookings = await _context.Bookings
-                .Where(b => b.Status == "Completed" || b.Status == "Paid")
+                .Where(b => b.Status == "Completed" || b.Status == "Paid" || b.Status == "Confirmed")
                 .ToListAsync();
 
             overview.TotalBookings = completedBookings.Count;
@@ -46,7 +46,6 @@ namespace LunaWash.BLL.Services
             var allSlots = await _context.WashSlots.ToListAsync();
             var allReviews = await _context.ServiceReviews.ToListAsync();
             var today = DateTime.UtcNow.Date;
-            var sevenDaysAgo = today.AddDays(-6);
 
             // Revenue by Branch
             var branches = await _context.Branches.Where(b => !b.IsDeleted).ToListAsync();
@@ -55,14 +54,13 @@ namespace LunaWash.BLL.Services
                 var branchBookings = completedBookings
                     .Where(b => b.BranchId == branch.Id).ToList();
 
-                // Lấy ngày giao dịch gần nhất của chi nhánh này làm mốc (để biểu đồ không bị phẳng lỳ nếu data cũ)
-                var latestBooking = branchBookings.OrderByDescending(b => b.CreatedAt).FirstOrDefault();
-                var referenceDate = latestBooking != null ? latestBooking.CreatedAt.Date : DateTime.UtcNow.Date;
+                var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                var referenceDate = localToday;
                 var chartStartDate = referenceDate.AddDays(-6);
 
-                // Doanh thu của ngày có giao dịch gần nhất (DOANH THU NGÀY)
+                // Doanh thu của ngày hôm nay (DOANH THU NGÀY)
                 var branchRevenue = branchBookings
-                    .Where(b => b.CreatedAt.Date == referenceDate)
+                    .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == referenceDate)
                     .Sum(b => b.TotalPrice);
 
                 // Calculate Stations
@@ -84,7 +82,7 @@ namespace LunaWash.BLL.Services
                 {
                     var date = chartStartDate.AddDays(i);
                     var dayRevenue = branchBookings
-                        .Where(b => b.CreatedAt.Date == date)
+                        .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == date)
                         .Sum(b => b.TotalPrice);
                     
                     sparkline.Add(new DailyRevenueDto { Value = dayRevenue });
@@ -136,7 +134,7 @@ namespace LunaWash.BLL.Services
             var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
 
             var allBookings = await _context.Bookings
-                .Where(b => b.BranchId == branchId && (b.Status == "Completed" || b.Status == "Paid"))
+                .Where(b => b.BranchId == branchId && (b.Status == "Completed" || b.Status == "Paid" || b.Status == "Confirmed"))
                 .ToListAsync();
 
             overview.TodayRevenue = allBookings
