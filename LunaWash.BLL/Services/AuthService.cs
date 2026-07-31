@@ -51,7 +51,20 @@ namespace LunaWash.BLL.Services
                 throw new UnauthorizedAccessException("GoogleLoginRequired");
             }
 
-            if (user.Password != loginDto.Password)
+            bool isPasswordValid = false;
+            if (!string.IsNullOrEmpty(user.Password))
+            {
+                if (user.Password.StartsWith("$2a$") || user.Password.StartsWith("$2b$") || user.Password.StartsWith("$2y$"))
+                {
+                    isPasswordValid = BCrypt.Net.BCrypt.Verify(loginDto.Password, user.Password);
+                }
+                else
+                {
+                    isPasswordValid = (user.Password == loginDto.Password);
+                }
+            }
+
+            if (!isPasswordValid)
             {
                 return null;
             }
@@ -215,7 +228,7 @@ namespace LunaWash.BLL.Services
                 IsDeleted = false
             };
 
-            user.Password = registerDto.Password;
+            user.Password = BCrypt.Net.BCrypt.HashPassword(registerDto.Password);
             _context.Users.Add(user);
 
             if (customerRole != null && customerRole.Id == user.RoleId)
@@ -314,7 +327,7 @@ namespace LunaWash.BLL.Services
                     var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
                     if (user != null)
                     {
-                        user.Password = newPassword;
+                        user.Password = BCrypt.Net.BCrypt.HashPassword(newPassword);
                         user.UpdatedAt = DateTime.UtcNow;
                         await _context.SaveChangesAsync();
                         _cache.Remove($"OTP_{email}");
