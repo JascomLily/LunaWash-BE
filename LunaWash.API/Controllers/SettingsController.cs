@@ -15,6 +15,9 @@ namespace LunaWash.API.Controllers
             _settingsService = settingsService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin payment settings
+        /// </summary>
         [HttpGet("payments")]
         public async Task<IActionResult> GetPaymentSettings()
         {
@@ -22,6 +25,9 @@ namespace LunaWash.API.Controllers
             return Ok(settings);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật payment settings
+        /// </summary>
         [HttpPut("payments")]
         public async Task<IActionResult> UpdatePaymentSettings([FromBody] PaymentSettings settings)
         {

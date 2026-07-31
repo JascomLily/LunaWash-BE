@@ -17,7 +17,6 @@ namespace LunaWash.BLL.Interfaces
         public int MinPoints { get; set; }
         public int MinMaintainPoints { get; set; }
         public decimal PointsMultiplier { get; set; }
-        public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
         public int CustomerCount { get; set; }
         public int MaxBookingDays { get; set; }
@@ -28,7 +27,6 @@ namespace LunaWash.BLL.Interfaces
         public int MinPoints { get; set; }
         public int MinMaintainPoints { get; set; }
         public decimal PointsMultiplier { get; set; }
-        public int PriorityLevel { get; set; }
         public decimal DiscountPercent { get; set; }
         public int MaxBookingDays { get; set; }
     }

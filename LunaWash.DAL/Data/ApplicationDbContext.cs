@@ -209,7 +209,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.PointsMultiplier)
                 .HasDefaultValue(1.00m)
                 .HasColumnType("decimal(5, 2)");
-            entity.Property(e => e.PriorityLevel).HasDefaultValue(1);
             entity.Property(e => e.TierName).HasMaxLength(50);
         });
 

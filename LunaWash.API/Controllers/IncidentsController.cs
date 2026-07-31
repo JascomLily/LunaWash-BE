@@ -19,6 +19,9 @@ namespace LunaWash.API.Controllers
             _incidentService = incidentService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới incident
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentRequest request)
         {
@@ -32,6 +35,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin incidents by branch
+        /// </summary>
         [HttpGet("branch/{branchId}")]
         [Authorize(Roles = "Admin,BranchManager,Staff")]
         public async Task<IActionResult> GetIncidentsByBranch(string branchId)
@@ -40,6 +46,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin incident by id
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetIncidentById(string id)
         {
@@ -48,6 +57,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật incident status
+        /// </summary>
         [HttpPut("{id}/status")]
         [Authorize(Roles = "Admin,BranchManager")]
         public async Task<IActionResult> UpdateIncidentStatus(string id, [FromBody] UpdateIncidentStatusRequest request)

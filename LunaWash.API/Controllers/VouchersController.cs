@@ -18,6 +18,9 @@ public class VouchersController : ControllerBase
         _voucherService = voucherService;
     }
 
+    /// <summary>
+    /// API xử lý chức năng: Lấy danh sách / thông tin active vouchers
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetActiveVouchers()
     {
@@ -26,6 +29,9 @@ public class VouchersController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    /// <summary>
+    /// API xử lý chức năng: Lấy danh sách / thông tin all vouchers
+    /// </summary>
     [HttpGet("all")]
     public async Task<IActionResult> GetAllVouchers()
     {
@@ -34,6 +40,9 @@ public class VouchersController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    /// <summary>
+    /// API xử lý chức năng: Tạo mới voucher
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateVoucher([FromBody] CreateVoucherDto dto)
     {
@@ -49,6 +58,9 @@ public class VouchersController : ControllerBase
     }
 
     [Authorize(Roles = "Admin")]
+    /// <summary>
+    /// API xử lý chức năng: Xóa voucher
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteVoucher(string id)
     {
@@ -59,6 +71,9 @@ public class VouchersController : ControllerBase
     }
 
     [Authorize]
+    /// <summary>
+    /// API xử lý chức năng: Lấy danh sách / thông tin my vouchers
+    /// </summary>
     [HttpGet("my-vouchers")]
     public async Task<IActionResult> GetMyVouchers()
     {
@@ -70,6 +85,9 @@ public class VouchersController : ControllerBase
     }
 
     [Authorize]
+    /// <summary>
+    /// API xử lý chức năng: Save voucher
+    /// </summary>
     [HttpPost("save/{voucherId}")]
     public async Task<IActionResult> SaveVoucher(string voucherId)
     {

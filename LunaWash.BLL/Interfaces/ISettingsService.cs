@@ -16,5 +16,6 @@ namespace LunaWash.BLL.Interfaces
         public bool IsZaloPayActive { get; set; } = false;
         public string VnpayTmnCode { get; set; } = "";
         public string VnpayHashSecret { get; set; } = "";
+        public string MinimumTierIdForCash { get; set; } = "TIER-MEM"; // Default to lowest tier
     }
 }

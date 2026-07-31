@@ -15,8 +15,6 @@ public partial class MembershipTier
 
     public decimal PointsMultiplier { get; set; }
 
-    public int PriorityLevel { get; set; }
-
     public decimal DiscountPercent { get; set; }
 
     public int MaxBookingDays { get; set; } = 3;
