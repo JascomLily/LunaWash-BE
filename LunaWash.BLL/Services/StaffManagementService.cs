@@ -48,14 +48,14 @@ namespace LunaWash.BLL.Services
 
             var employeeIds = employees.Select(e => e.Id).ToList();
 
-            var attendanceRecords = await _context.DailyAttendances
-                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date.Date == date.Date && a.Shift == shift)
+            var attendanceRecords = await _context.Attendances
+                .Where(a => employeeIds.Contains(a.UserId) && a.AttendanceDate.Date == date.Date && a.BranchId == branchId)
                 .ToListAsync();
 
             var result = new List<DailyAttendanceResponseDto>();
             foreach (var emp in employees)
             {
-                var record = attendanceRecords.FirstOrDefault(r => r.EmployeeId == emp.Id);
+                var record = attendanceRecords.FirstOrDefault(r => r.UserId == emp.Id);
                 result.Add(new DailyAttendanceResponseDto
                 {
                     EmployeeId = emp.Id,
@@ -63,7 +63,7 @@ namespace LunaWash.BLL.Services
                     RoleName = emp.Role.RoleName,
                     Status = record?.Status ?? "Vắng mặt",
                     CheckInTime = record?.CheckInTime?.AddHours(7).ToString("HH:mm"),
-                    Notes = record?.Notes
+                    Notes = record?.Note
                 });
             }
             return result;
@@ -73,18 +73,18 @@ namespace LunaWash.BLL.Services
         {
             var today = DateTime.UtcNow.Date;
             var employeeIds = dto.Attendances.Select(a => a.EmployeeId).ToList();
-            var existingRecords = await _context.DailyAttendances
-                .Where(a => employeeIds.Contains(a.EmployeeId) && a.Date.Date == today && a.Shift == dto.Shift)
+            var existingRecords = await _context.Attendances
+                .Where(a => employeeIds.Contains(a.UserId) && a.AttendanceDate.Date == today)
                 .ToListAsync();
 
             foreach (var att in dto.Attendances)
             {
-                var record = existingRecords.FirstOrDefault(r => r.EmployeeId == att.EmployeeId);
+                var record = existingRecords.FirstOrDefault(r => r.UserId == att.EmployeeId);
 
                 if (record != null)
                 {
                     record.Status = att.Status;
-                    record.Notes = att.Note;
+                    record.Note = att.Note;
                     if (att.Status == "Có mặt" && record.CheckInTime == null)
                     {
                         record.CheckInTime = DateTime.UtcNow;
@@ -92,17 +92,17 @@ namespace LunaWash.BLL.Services
                 }
                 else
                 {
-                    record = new DailyAttendance
+                    record = new Attendance
                     {
                         Id = "ATT-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
-                        EmployeeId = att.EmployeeId,
-                        Date = today,
-                        Shift = dto.Shift,
+                        UserId = att.EmployeeId,
+                        BranchId = dto.BranchId,
+                        AttendanceDate = today,
                         Status = att.Status,
-                        Notes = att.Note,
+                        Note = att.Note,
                         CheckInTime = att.Status == "Có mặt" ? DateTime.UtcNow : null
                     };
-                    _context.DailyAttendances.Add(record);
+                    _context.Attendances.Add(record);
                 }
             }
             await _context.SaveChangesAsync();
@@ -118,7 +118,7 @@ namespace LunaWash.BLL.Services
 
             var employeeIds = employees.Select(e => e.Id).ToList();
 
-            var templates = await _context.EmployeeScheduleTemplates
+            var templates = await _context.StaffSchedules
                 .Where(t => employeeIds.Contains(t.EmployeeId))
                 .ToListAsync();
 
@@ -140,7 +140,7 @@ namespace LunaWash.BLL.Services
         {
             foreach (var item in dto.Templates)
             {
-                var existing = await _context.EmployeeScheduleTemplates
+                var existing = await _context.StaffSchedules
                     .FirstOrDefaultAsync(t => t.EmployeeId == item.EmployeeId);
 
                 if (existing != null)
@@ -155,7 +155,7 @@ namespace LunaWash.BLL.Services
                         existing.UpdatedAt = DateTime.UtcNow;
 
                         // Log history
-                        var history = new ScheduleHistory
+                        var history = new ScheduleHistoryLog
                         {
                             Id = "HIS-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                             BranchId = branchId,
@@ -166,23 +166,24 @@ namespace LunaWash.BLL.Services
                             NewValue = newVal,
                             CreatedAt = DateTime.UtcNow
                         };
-                        _context.ScheduleHistories.Add(history);
+                        _context.ScheduleHistoryLogs.Add(history);
                     }
                 }
                 else
                 {
-                    var template = new EmployeeScheduleTemplate
+                    var template = new StaffSchedule
                     {
                         Id = "TMP-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                         EmployeeId = item.EmployeeId,
+                        BranchId = branchId,
                         Shift = item.Shift,
                         DayOff = item.DayOff,
-                        CreatedAt = DateTime.UtcNow
+                        UpdatedAt = DateTime.UtcNow
                     };
-                    _context.EmployeeScheduleTemplates.Add(template);
+                    _context.StaffSchedules.Add(template);
 
                     // Log history
-                    var history = new ScheduleHistory
+                    var history = new ScheduleHistoryLog
                     {
                         Id = "HIS-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                         BranchId = branchId,
@@ -193,7 +194,7 @@ namespace LunaWash.BLL.Services
                         NewValue = $"Ca: {item.Shift}, Nghỉ: {item.DayOff}",
                         CreatedAt = DateTime.UtcNow
                     };
-                    _context.ScheduleHistories.Add(history);
+                    _context.ScheduleHistoryLogs.Add(history);
                 }
             }
             await _context.SaveChangesAsync();
@@ -202,7 +203,7 @@ namespace LunaWash.BLL.Services
 
         public async Task<IEnumerable<ScheduleHistoryResponseDto>> GetScheduleHistoryAsync(string branchId)
         {
-            var history = await _context.ScheduleHistories
+            var history = await _context.ScheduleHistoryLogs
                 .Include(h => h.ModifiedBy)
                 .Include(h => h.Employee)
                 .Where(h => h.BranchId == branchId)

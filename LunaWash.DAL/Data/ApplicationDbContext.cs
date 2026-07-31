@@ -71,11 +71,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Banner> Banners { get; set; }
 
-    public virtual DbSet<EmployeeScheduleTemplate> EmployeeScheduleTemplates { get; set; }
-
-    public virtual DbSet<DailyAttendance> DailyAttendances { get; set; }
-
-    public virtual DbSet<ScheduleHistory> ScheduleHistories { get; set; }
+    public virtual DbSet<StaffSchedule> StaffSchedules { get; set; }
+    public virtual DbSet<ScheduleHistoryLog> ScheduleHistoryLogs { get; set; }
     public virtual DbSet<IncidentReport> IncidentReports { get; set; }
     public virtual DbSet<EquipmentCheckLog> EquipmentCheckLogs { get; set; }
     public virtual DbSet<SystemSetting> SystemSettings { get; set; }
@@ -431,66 +428,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
         });
 
-        modelBuilder.Entity<EmployeeScheduleTemplate>(entity =>
-        {
-            entity.ToTable("EmployeeScheduleTemplates");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.Shift).HasMaxLength(50);
-            entity.Property(e => e.DayOff).HasMaxLength(50);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
 
-            entity.HasOne(d => d.Employee)
-                .WithMany()
-                .HasForeignKey(d => d.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<DailyAttendance>(entity =>
-        {
-            entity.ToTable("DailyAttendances");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.Shift).HasMaxLength(50);
-            entity.Property(e => e.Status).HasMaxLength(50);
-            entity.Property(e => e.Notes).HasMaxLength(500);
-
-            entity.HasOne(d => d.Employee)
-                .WithMany()
-                .HasForeignKey(d => d.EmployeeId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<ScheduleHistory>(entity =>
-        {
-            entity.ToTable("ScheduleHistories");
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.Action).HasMaxLength(150);
-            entity.Property(e => e.OldValue).HasMaxLength(500);
-            entity.Property(e => e.NewValue).HasMaxLength(500);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-
-            entity.HasOne(d => d.Branch)
-                .WithMany()
-                .HasForeignKey(d => d.BranchId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(d => d.ModifiedBy)
-                .WithMany()
-                .HasForeignKey(d => d.ModifiedById)
-                .OnDelete(DeleteBehavior.NoAction);
-
-            entity.HasOne(d => d.Employee)
-                .WithMany()
-                .HasForeignKey(d => d.EmployeeId)
-                .OnDelete(DeleteBehavior.NoAction);
-        });
 
         modelBuilder.Entity<IncidentReport>(entity =>
         {
@@ -542,6 +480,50 @@ public partial class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.RespondedById)
                 .OnDelete(DeleteBehavior.NoAction);
+        });
+
+        modelBuilder.Entity<StaffSchedule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.Shift).HasMaxLength(50);
+            entity.Property(e => e.DayOff).HasMaxLength(50);
+
+            entity.HasOne(d => d.Employee)
+                .WithMany()
+                .HasForeignKey(d => d.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Branch)
+                .WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ScheduleHistoryLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
+
+            entity.HasOne(d => d.Branch)
+                .WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.Employee)
+                .WithMany()
+                .HasForeignKey(d => d.EmployeeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.ModifiedBy)
+                .WithMany()
+                .HasForeignKey(d => d.ModifiedById)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         OnModelCreatingPartial(modelBuilder);
