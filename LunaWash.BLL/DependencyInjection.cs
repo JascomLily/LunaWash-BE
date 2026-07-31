@@ -13,7 +13,8 @@ namespace LunaWash.BLL
         {
             // 1. Configure DbContext in DAL
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                       .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
             // 2. Register BLL Services
             services.AddScoped<IAuthService, AuthService>();
