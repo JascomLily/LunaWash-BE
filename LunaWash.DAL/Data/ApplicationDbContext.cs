@@ -76,11 +76,6 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<ScheduleHistoryLog> ScheduleHistoryLogs { get; set; }
     public virtual DbSet<IncidentReport> IncidentReports { get; set; }
 
-    public virtual DbSet<Banner> Banners { get; set; }
-
-    public virtual DbSet<StaffSchedule> StaffSchedules { get; set; }
-    public virtual DbSet<ScheduleHistoryLog> ScheduleHistoryLogs { get; set; }
-    public virtual DbSet<IncidentReport> IncidentReports { get; set; }
     public virtual DbSet<EquipmentCheckLog> EquipmentCheckLogs { get; set; }
     public virtual DbSet<SystemSetting> SystemSettings { get; set; }
 
@@ -424,18 +419,11 @@ public partial class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-<<<<<<< HEAD
         modelBuilder.Entity<Banner>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
             entity.Property(e => e.ImageUrl).IsRequired().HasColumnType("nvarchar(max)");
-            entity.Property(e => e.Title).HasMaxLength(150);
-            entity.Property(e => e.RedirectUrl).HasMaxLength(250);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
         });
-
-
 
         modelBuilder.Entity<IncidentReport>(entity =>
         {
@@ -475,19 +463,12 @@ public partial class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<MaintenanceTask>(entity =>
         {
-            entity.HasOne(d => d.AssignedTo)
+            entity.HasOne(d => d.Assignee)
                 .WithMany()
-                .HasForeignKey(d => d.AssignedToId)
+                .HasForeignKey(d => d.AssigneeId)
                 .OnDelete(DeleteBehavior.NoAction);
         });
 
-        modelBuilder.Entity<ServiceReview>(entity =>
-        {
-            entity.HasOne(d => d.RespondedBy)
-                .WithMany()
-                .HasForeignKey(d => d.RespondedById)
-                .OnDelete(DeleteBehavior.NoAction);
-=======
         modelBuilder.Entity<CustomerVoucher>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -523,7 +504,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.VoucherName).HasMaxLength(150);
->>>>>>> origin/main
         });
 
         modelBuilder.Entity<StaffSchedule>(entity =>
@@ -550,20 +530,9 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
-<<<<<<< HEAD
             entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
             entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
             entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
-
-            entity.HasOne(d => d.Branch)
-                .WithMany()
-                .HasForeignKey(d => d.BranchId)
-                .OnDelete(DeleteBehavior.Cascade);
-=======
-            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
-            entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
->>>>>>> origin/main
 
             entity.HasOne(d => d.Employee)
                 .WithMany()
@@ -573,16 +542,12 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.ModifiedBy)
                 .WithMany()
                 .HasForeignKey(d => d.ModifiedById)
-<<<<<<< HEAD
                 .OnDelete(DeleteBehavior.Restrict);
-=======
-                .OnDelete(DeleteBehavior.Restrict); // Avoid multiple cascade paths
 
             entity.HasOne(d => d.Branch)
                 .WithMany()
                 .HasForeignKey(d => d.BranchId)
                 .OnDelete(DeleteBehavior.Cascade);
->>>>>>> origin/main
         });
 
         OnModelCreatingPartial(modelBuilder);
