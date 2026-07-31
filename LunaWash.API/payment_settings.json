@@ -1,8 +1,9 @@
 {
   "IsCashActive": true,
-  "IsVnpayActive": false,
+  "IsVnpayActive": true,
   "IsMomoActive": false,
   "IsZaloPayActive": false,
   "VnpayTmnCode": "",
-  "VnpayHashSecret": ""
+  "VnpayHashSecret": "",
+  "MinimumTierIdForCash": "TIER-GLD"
 }

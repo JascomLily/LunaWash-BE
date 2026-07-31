@@ -17,6 +17,9 @@ namespace LunaWash.API.Controllers
             _employeeService = employeeService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin all employees
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAllEmployees()
         {
@@ -24,6 +27,9 @@ namespace LunaWash.API.Controllers
             return Ok(employees);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin employees by branch
+        /// </summary>
         [HttpGet("branch/{branchId}")]
         public async Task<IActionResult> GetEmployeesByBranch(string branchId)
         {
@@ -31,6 +37,9 @@ namespace LunaWash.API.Controllers
             return Ok(employees);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật salary
+        /// </summary>
         [HttpPut("{id}/salary")]
         public async Task<IActionResult> UpdateSalary(string id, [FromBody] UpdateSalaryRequest request)
         {
@@ -39,6 +48,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Cập nhật lương thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật status
+        /// </summary>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusRequest request)
         {
@@ -47,6 +59,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Cập nhật trạng thái thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Thêm employee
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> AddEmployee([FromBody] EmployeeCreateDto dto)
         {
@@ -62,6 +77,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa employee
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmployee(string id)
         {
@@ -70,6 +88,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Xóa nhân viên thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Kiểm tra in
+        /// </summary>
         [HttpPost("checkin")]
         public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
         {
@@ -78,6 +99,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Check-in thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Kiểm tra out
+        /// </summary>
         [HttpPost("checkout")]
         public async Task<IActionResult> CheckOut([FromBody] CheckOutRequest request)
         {
@@ -86,6 +110,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Check-out thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin attendances
+        /// </summary>
         [HttpGet("branch/{branchId}/attendance")]
         public async Task<IActionResult> GetAttendances(string branchId, [FromQuery] string date)
         {
@@ -93,6 +120,9 @@ namespace LunaWash.API.Controllers
             return Ok(attendances);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin weekly leaves
+        /// </summary>
         [HttpGet("branch/{branchId}/weekly-leaves")]
         public async Task<IActionResult> GetWeeklyLeaves(string branchId, [FromQuery] string date)
         {

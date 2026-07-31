@@ -29,6 +29,8 @@ namespace LunaWash.API.Controllers
         /// </summary>
         [HttpPost]
         [AllowAnonymous]
+        // BE: ĐÂY LÀ NƠI NHẬN API CHO CHỨC NĂNG: Xử lý Đặt lịch (Booking)
+        // -> Được gọi từ: FE - src/pages/Booking.jsx (Khi user bấm nút Đặt lịch)
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDTO dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);

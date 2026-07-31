@@ -20,6 +20,9 @@ public class BannersController : ControllerBase
         _context = context;
     }
 
+    /// <summary>
+    /// API xử lý chức năng: Lấy danh sách / thông tin banners
+    /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetBanners([FromQuery] string platform = "Web")
     {
@@ -48,6 +51,9 @@ public class BannersController : ControllerBase
         return Ok(new { success = true, data = dtos });
     }
 
+    /// <summary>
+    /// API xử lý chức năng: Save banners
+    /// </summary>
     [HttpPost("save")]
     public async Task<IActionResult> SaveBanners([FromBody] List<SaveBannerDto> bannerDtos)
     {
@@ -70,6 +76,9 @@ public class BannersController : ControllerBase
         return Ok(new { success = true, message = "Banners saved successfully" });
     }
 
+    /// <summary>
+    /// API xử lý chức năng: Tải lên banner photo
+    /// </summary>
     [HttpPost("upload")]
     public async Task<IActionResult> UploadBannerPhoto([FromForm] Microsoft.AspNetCore.Http.IFormFile file, [FromServices] LunaWash.BLL.Interfaces.IPhotoService photoService)
     {

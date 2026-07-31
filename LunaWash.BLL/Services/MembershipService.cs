@@ -36,7 +36,6 @@ namespace LunaWash.BLL.Services
                 MinPoints = t.MinPoints,
                 MinMaintainPoints = t.MinMaintainPoints,
                 PointsMultiplier = t.PointsMultiplier,
-                PriorityLevel = t.PriorityLevel,
                 DiscountPercent = t.DiscountPercent,
                 CustomerCount = customerCounts.ContainsKey(t.Id) ? customerCounts[t.Id] : 0,
                 MaxBookingDays = t.MaxBookingDays
@@ -51,7 +50,6 @@ namespace LunaWash.BLL.Services
             tier.MinPoints = dto.MinPoints;
             tier.MinMaintainPoints = dto.MinMaintainPoints;
             tier.PointsMultiplier = dto.PointsMultiplier;
-            tier.PriorityLevel = dto.PriorityLevel;
             tier.DiscountPercent = dto.DiscountPercent;
             tier.MaxBookingDays = dto.MaxBookingDays;
             tier.UpdatedAt = DateTime.UtcNow;

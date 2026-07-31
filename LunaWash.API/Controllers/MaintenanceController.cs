@@ -19,6 +19,9 @@ namespace LunaWash.API.Controllers
             _maintenanceService = maintenanceService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới maintenance task
+        /// </summary>
         [HttpPost]
         [Authorize(Roles = "Admin,BranchManager")]
         public async Task<IActionResult> CreateMaintenanceTask([FromBody] CreateMaintenanceRequest request)
@@ -27,6 +30,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance tasks by branch
+        /// </summary>
         [HttpGet("branch/{branchId}")]
         [Authorize(Roles = "Admin,BranchManager,TechnicalStaff")]
         public async Task<IActionResult> GetMaintenanceTasksByBranch(string branchId)
@@ -35,6 +41,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance tasks by assignee
+        /// </summary>
         [HttpGet("assignee")]
         public async Task<IActionResult> GetMaintenanceTasksByAssignee()
         {
@@ -48,6 +57,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance task by id
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetMaintenanceTaskById(string id)
         {
@@ -56,6 +68,9 @@ namespace LunaWash.API.Controllers
             return Ok(result);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật maintenance task status
+        /// </summary>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateMaintenanceTaskStatus(string id, [FromBody] UpdateMaintenanceStatusRequest request)
         {
@@ -64,6 +79,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Status updated successfully" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Assign maintenance task
+        /// </summary>
         [HttpPut("{id}/assign")]
         [Authorize(Roles = "TechnicalStaff")]
         public async Task<IActionResult> AssignMaintenanceTask(string id)

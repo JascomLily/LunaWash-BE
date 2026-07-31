@@ -16,6 +16,9 @@ namespace LunaWash.API.Controllers
             _staffManagementService = staffManagementService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin templates
+        /// </summary>
         [HttpGet("branch/{branchId}/templates")]
         public async Task<IActionResult> GetTemplates(string branchId)
         {
@@ -23,6 +26,9 @@ namespace LunaWash.API.Controllers
             return Ok(schedules);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Save templates
+        /// </summary>
         [HttpPut("templates")]
         public async Task<IActionResult> SaveTemplates([FromQuery] string branchId, [FromQuery] string managerId, [FromBody] SaveStaffSchedulesRequest request)
         {
@@ -31,6 +37,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Lưu khuôn mẫu lịch thành công." });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin history
+        /// </summary>
         [HttpGet("branch/{branchId}/history")]
         public async Task<IActionResult> GetHistory(string branchId)
         {
@@ -38,6 +47,9 @@ namespace LunaWash.API.Controllers
             return Ok(history);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Save attendance
+        /// </summary>
         [HttpPut("attendance")]
         public async Task<IActionResult> SaveAttendance([FromBody] SaveAttendanceRequest request)
         {

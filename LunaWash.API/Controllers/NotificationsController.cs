@@ -26,6 +26,9 @@ namespace LunaWash.API.Controllers
                 ?? string.Empty;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin my notifications
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetMyNotifications()
         {
@@ -54,6 +57,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Mark as read
+        /// </summary>
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(string id)
         {

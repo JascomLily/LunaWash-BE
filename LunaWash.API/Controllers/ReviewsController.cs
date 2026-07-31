@@ -26,6 +26,9 @@ namespace LunaWash.API.Controllers
                 ?? string.Empty;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin reviews by branch
+        /// </summary>
         [HttpGet("branch/{branchId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetReviewsByBranch(string branchId)
@@ -34,6 +37,9 @@ namespace LunaWash.API.Controllers
             return Ok(reviews);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới review
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
@@ -51,6 +57,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin review by booking id
+        /// </summary>
         [HttpGet("booking/{bookingId}")]
         public async Task<IActionResult> GetReviewByBookingId(string bookingId)
         {
@@ -60,6 +69,9 @@ namespace LunaWash.API.Controllers
             return Ok(review);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật review
+        /// </summary>
         [HttpPut("{bookingId}")]
         public async Task<IActionResult> UpdateReview(string bookingId, [FromBody] UpdateReviewDto dto)
         {
@@ -77,6 +89,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa review
+        /// </summary>
         [HttpDelete("{bookingId}")]
         public async Task<IActionResult> DeleteReview(string bookingId)
         {
@@ -96,6 +111,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Reply to review
+        /// </summary>
         [HttpPost("{reviewId}/reply")]
         [Authorize(Roles = "BranchManager,Manager,Admin")]
         public async Task<IActionResult> ReplyToReview(string reviewId, [FromBody] ReplyReviewRequestDto dto)

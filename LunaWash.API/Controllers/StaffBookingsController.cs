@@ -19,6 +19,9 @@ namespace LunaWash.API.Controllers
         }
 
         
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin today queue
+        /// </summary>
         [HttpGet("today/{branchId}")]
         public async Task<IActionResult> GetTodayQueue(string branchId, [FromQuery] string? date)
         {
@@ -26,6 +29,9 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin branch history
+        /// </summary>
         [HttpGet("history/{branchId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBranchHistory(string branchId)
@@ -35,6 +41,9 @@ namespace LunaWash.API.Controllers
         }
 
       
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật status
+        /// </summary>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateBookingStatusDTO dto)
         {
@@ -46,6 +55,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = $"Đã cập nhật trạng thái thành: {dto.Status}" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Thêm interior cleaning
+        /// </summary>
         [HttpPut("{id}/add-interior-cleaning")]
         public async Task<IActionResult> AddInteriorCleaning(string id)
         {

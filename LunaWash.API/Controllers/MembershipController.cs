@@ -15,6 +15,9 @@ namespace LunaWash.API.Controllers
             _membershipService = membershipService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin settings
+        /// </summary>
         [HttpGet("settings")]
         public async Task<IActionResult> GetSettings()
         {
@@ -22,6 +25,9 @@ namespace LunaWash.API.Controllers
             return Ok(tiers);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật setting
+        /// </summary>
         [HttpPut("settings/{id}")]
         public async Task<IActionResult> UpdateSetting(string id, [FromBody] MembershipTierUpdateDto dto)
         {
@@ -30,6 +36,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Cập nhật hạng thành viên thành công" });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Sync customer tiers
+        /// </summary>
         [HttpPost("sync")]
         public async Task<IActionResult> SyncCustomerTiers()
         {

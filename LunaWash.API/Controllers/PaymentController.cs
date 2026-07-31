@@ -30,10 +30,14 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
-        /// <summary>
+       
+
         /// Create a VNPAY payment link for a specific booking
-        /// </summary>
+        
         [HttpPost("create-vnpay-url/{bookingId}")]
+        // BE: ĐÂY LÀ NƠI NHẬN API CHO CHỨC NĂNG: Khởi tạo thanh toán VNPay
+        // -> Được gọi từ: FE - src/pages/Booking.jsx (Ngay sau khi Đặt lịch thành công)
+
         public async Task<IActionResult> CreateVnPayUrl(string bookingId)
         {
             // 1. Tìm đơn hàng

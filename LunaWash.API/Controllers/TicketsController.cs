@@ -15,6 +15,9 @@ namespace LunaWash.API.Controllers
             _ticketService = ticketService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin tickets
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetTickets()
         {
@@ -22,6 +25,9 @@ namespace LunaWash.API.Controllers
             return Ok(tickets);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật status
+        /// </summary>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateTicketStatusRequest request)
         {

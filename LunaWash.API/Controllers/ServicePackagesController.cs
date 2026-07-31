@@ -18,6 +18,9 @@ namespace LunaWash.API.Controllers
             _packageService = packageService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin all packages
+        /// </summary>
         [HttpGet]
         [AllowAnonymous]
         public async Task<IActionResult> GetAllPackages([FromQuery] bool activeOnly = false)
@@ -33,6 +36,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin package by id
+        /// </summary>
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetPackageById(string id)
@@ -49,6 +55,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới package
+        /// </summary>
         [HttpPost]
         [Authorize] // Có thể phân quyền [Authorize(Roles = "Admin")] sau này
         public async Task<IActionResult> CreatePackage([FromBody] ServicePackageCreateUpdateDto dto)
@@ -65,6 +74,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật package
+        /// </summary>
         [HttpPut("{id}")]
         [Authorize]
         public async Task<IActionResult> UpdatePackage(string id, [FromBody] ServicePackageCreateUpdateDto dto)
@@ -82,6 +94,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa package
+        /// </summary>
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> DeletePackage(string id)
