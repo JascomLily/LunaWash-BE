@@ -20,9 +20,10 @@ namespace LunaWash.API.Controllers
             _configuration = configuration;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Login
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng đăng nhập cho người dùng
+        //<</.....>>
+        // [API: POST /api/Auth/login, dùng để xử lý đăng nhập, nhận dữ liệu đăng nhập từ FE]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginDto)
         {
@@ -52,9 +53,10 @@ namespace LunaWash.API.Controllers
             }
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Register
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng đăng ký tài khoản mới cho người dùng
+        //<</.....>>
+        // [API: POST /api/Auth/register, dùng để đăng ký, nhận thông tin đăng ký từ FE]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerDto)
         {
@@ -73,9 +75,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Registration successful." });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Google login
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng đăng nhập bằng Google
+        //<</.....>>
+        // [API: POST /api/Auth/google-login, dùng để đăng nhập qua Google, nhận token từ FE]
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
         {
@@ -108,9 +111,10 @@ namespace LunaWash.API.Controllers
             public string Otp { get; set; } = null!;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Verify otp
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng xác thực mã OTP
+        //<</.....>>
+        // [API: POST /api/Auth/verify-otp, dùng để xác thực OTP, nhận email và mã OTP từ FE]
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
         {
@@ -127,9 +131,10 @@ namespace LunaWash.API.Controllers
             public string Email { get; set; } = null!;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Resend otp
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng gửi lại mã OTP
+        //<</.....>>
+        // [API: POST /api/Auth/resend-otp, dùng để gửi lại OTP, nhận email từ FE]
         [HttpPost("resend-otp")]
         public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request)
         {
@@ -146,9 +151,10 @@ namespace LunaWash.API.Controllers
             public string Email { get; set; } = null!;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Forgot password
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng quên mật khẩu
+        //<</.....>>
+        // [API: POST /api/Auth/forgot-password, dùng để gửi OTP quên mật khẩu, nhận email từ FE]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
@@ -167,9 +173,10 @@ namespace LunaWash.API.Controllers
             public string NewPassword { get; set; } = null!;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Reset password
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng đặt lại mật khẩu mới
+        //<</.....>>
+        // [API: POST /api/Auth/reset-password, dùng để đặt lại mật khẩu, nhận email, OTP và mật khẩu mới từ FE]
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
@@ -182,9 +189,10 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin current user
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Lấy thông tin của người dùng hiện tại đang đăng nhập
+        //<</.....>>
+        // [API: GET /api/Auth/me, dùng để lấy thông tin tài khoản, yêu cầu token hợp lệ từ FE]
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
@@ -206,9 +214,10 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
-        /// <summary>
-        /// API xử lý chức năng: Cập nhật profile
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Cập nhật thông tin hồ sơ của người dùng
+        //<</.....>>
+        // [API: PUT /api/Auth/me, dùng để cập nhật profile, nhận dữ liệu cập nhật từ FE]
         [HttpPut("me")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO updateDto)
         {
@@ -234,9 +243,10 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
-        /// <summary>
-        /// API xử lý chức năng: Kiểm tra login
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Kiểm tra trạng thái đăng nhập của người dùng
+        //<</.....>>
+        // [API: GET /api/Auth/check, dùng để kiểm tra login, trả về true nếu token hợp lệ]
         [HttpGet("check")]
         public IActionResult CheckLogin()
         {

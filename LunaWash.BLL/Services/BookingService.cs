@@ -25,6 +25,9 @@ namespace LunaWash.BLL.Services
             _notificationService = notificationService;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Xử lý nghiệp vụ tạo lịch đặt mới, bao gồm kiểm tra slot trống, tính toán giá tiền và lưu dữ liệu đặt lịch
+        //<</.....>>
         public async Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto)
         {
             var startTime = dto.ScheduledStartTime;
@@ -37,7 +40,7 @@ namespace LunaWash.BLL.Services
             var endTime = startTime.AddMinutes(durationMinutes);
             var bookingDate = startTime.Date;
 
-            // Kiểm tra giới hạn số ngày đặt trước theo hạng thành viên
+            // [Bình thường] Kiểm tra giới hạn số ngày đặt trước theo hạng thành viên
             var customerProfile = await _context.CustomerProfiles
                 .Include(cp => cp.MembershipTier)
                 .FirstOrDefaultAsync(cp => cp.UserId == userId);
@@ -399,6 +402,9 @@ namespace LunaWash.BLL.Services
             }
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Xử lý hoàn thành một lịch đặt và tiến hành cộng điểm thưởng (Loyalty) cho khách hàng
+        //<</.....>>
         public async Task<bool> CompleteBookingAsync(string bookingId)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
@@ -450,6 +456,9 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách lịch sử đặt lịch của một người dùng, đồng thời tự động hủy lịch nếu quá hạn chờ
+        //<</.....>>
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
             var bookingsToUpdate = await _context.Bookings
@@ -492,6 +501,9 @@ namespace LunaWash.BLL.Services
             });
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách các khoảng thời gian đã có người đặt trên một slot rửa xe nhất định
+        //<</.....>>
         public async Task<IEnumerable<OccupiedSlotDTO>> GetOccupiedSlotsAsync(string date, string washSlotId)
         {
             if (!DateOnly.TryParse(date, out var bookingDate)) return new List<OccupiedSlotDTO>();
@@ -508,6 +520,9 @@ namespace LunaWash.BLL.Services
             return bookings;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Khách hàng yêu cầu hủy lịch đặt, trạng thái được cập nhật thành Cancelled và gửi email thông báo
+        //<</.....>>
         public async Task<bool> CancelBookingAsync(string userId, string bookingId)
         {
             var booking = await _context.Bookings
@@ -563,6 +578,9 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Xóa vĩnh viễn một lịch đặt khỏi hệ thống (bao gồm xóa lịch sử điểm thưởng liên quan)
+        //<</.....>>
         public async Task<bool> HardDeleteBookingAsync(string userId, string bookingId)
         {
             var booking = await _context.Bookings
@@ -585,6 +603,9 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách lịch sử các lượt đặt đã hoàn thành hoặc đã hủy của một chi nhánh
+        //<</.....>>
         public async Task<IEnumerable<BookingResponseDTO>> GetBranchHistoryAsync(string branchId)
         {
             var bookings = await _context.Bookings
@@ -668,6 +689,9 @@ namespace LunaWash.BLL.Services
             return result;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách các lịch đặt trong ngày của chi nhánh dành cho nhân viên xem
+        //<</.....>>
         public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)
         {
             DateOnly targetDate;
@@ -712,6 +736,9 @@ namespace LunaWash.BLL.Services
             });
         }
         
+        //<<Comment Function>>
+        // Hàm này là: Cập nhật trạng thái của lịch đặt (Check-in, Washing, Completed), tích điểm thưởng nếu hoàn thành
+        //<</.....>>
         public async Task<bool> UpdateBookingStatusAsync(string bookingId, string newStatus)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
@@ -936,6 +963,9 @@ namespace LunaWash.BLL.Services
             };
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Tìm và tính toán các khung giờ 30 phút còn trống trong ngày của một chi nhánh dựa trên công suất
+        //<</.....>>
         public async Task<IEnumerable<string>> GetAvailableTimeSlotsAsync(string branchId, DateOnly date)
         {
             var availableSlots = new List<string>();
@@ -992,6 +1022,9 @@ namespace LunaWash.BLL.Services
             return availableSlots;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Xử lý nghiệp vụ đổi/trừ điểm tích lũy của khách hàng khi thanh toán
+        //<</.....>>
         public async Task<bool> UsePointsAsync(string userId, int pointsToUse)
         {
             var profile = await _context.CustomerProfiles.FirstOrDefaultAsync(cp => cp.UserId == userId);
@@ -1045,6 +1078,9 @@ namespace LunaWash.BLL.Services
             return false; // Không đủ điểm hợp lệ (hoặc điểm đã bị hết hạn trước đó)
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Thêm dịch vụ phụ (như vệ sinh nội thất) vào một lịch đặt đang xử lý
+        //<</.....>>
         public async Task<(bool Success, string Message)> AddInteriorCleaningAsync(string bookingId)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
@@ -1124,6 +1160,9 @@ namespace LunaWash.BLL.Services
             return (true, "Đã thêm dịch vụ vệ sinh nội thất thành công.");
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Nhân viên gửi yêu cầu khách hàng xác nhận đã đến tiệm
+        //<</.....>>
         public async Task<bool> RequestCustomerConfirmationAsync(string bookingId)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
@@ -1135,6 +1174,9 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Khách hàng bấm xác nhận sẵn sàng trên ứng dụng
+        //<</.....>>
         public async Task<bool> ConfirmReadyAsync(string bookingId)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
@@ -1146,6 +1188,9 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy trạng thái yêu cầu xác nhận và trạng thái xác nhận sẵn sàng của lịch đặt
+        //<</.....>>
         public async Task<(bool IsStartRequested, bool CustomerConfirmedReady)> GetBookingConfirmationStatusAsync(string bookingId)
         {
             var booking = await _context.Bookings

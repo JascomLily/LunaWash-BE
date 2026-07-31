@@ -18,9 +18,10 @@ namespace LunaWash.API.Controllers
             _employeeService = employeeService;
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin all employees
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy danh sách tất cả nhân viên]
+        //<<Comment Function>>
+        // Hàm này là: Trả về danh sách thông tin toàn bộ nhân viên trong hệ thống.
+        //<</.....>>
         [HttpGet]
         public async Task<IActionResult> GetAllEmployees()
         {
@@ -28,9 +29,10 @@ namespace LunaWash.API.Controllers
             return Ok(employees);
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin employees by branch
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy danh sách nhân viên theo chi nhánh]
+        //<<Comment Function>>
+        // Hàm này là: Lấy thông tin danh sách nhân viên thuộc về một chi nhánh cụ thể.
+        //<</.....>>
         [HttpGet("branch/{branchId}")]
         public async Task<IActionResult> GetEmployeesByBranch(string branchId)
         {
@@ -38,9 +40,10 @@ namespace LunaWash.API.Controllers
             return Ok(employees);
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Cập nhật salary
-        /// </summary>
+        // [API: Nhận yêu cầu PUT từ FE để cập nhật lương cho nhân viên]
+        //<<Comment Function>>
+        // Hàm này là: Thay đổi và cập nhật mức lương hiện tại của nhân viên dựa theo ID.
+        //<</.....>>
         [HttpPut("{id}/salary")]
         public async Task<IActionResult> UpdateSalary(string id, [FromBody] UpdateSalaryRequest request)
         {
@@ -49,9 +52,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Cập nhật lương thành công" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Cập nhật status
-        /// </summary>
+        // [API: Nhận yêu cầu PUT từ FE để cập nhật trạng thái làm việc của nhân viên]
+        //<<Comment Function>>
+        // Hàm này là: Đổi trạng thái hoạt động (kích hoạt/hủy kích hoạt) của một nhân viên.
+        //<</.....>>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateStatusRequest request)
         {
@@ -60,9 +64,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Cập nhật trạng thái thành công" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Thêm employee
-        /// </summary>
+        // [API: Nhận yêu cầu POST từ FE để thêm nhân viên mới vào hệ thống]
+        //<<Comment Function>>
+        // Hàm này là: Tạo một tài khoản nhân viên mới và lưu thông tin vào cơ sở dữ liệu.
+        //<</.....>>
         [HttpPost]
         public async Task<IActionResult> AddEmployee([FromBody] EmployeeCreateDto dto)
         {
@@ -78,9 +83,10 @@ namespace LunaWash.API.Controllers
             }
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Xóa employee
-        /// </summary>
+        // [API: Nhận yêu cầu DELETE từ FE để xóa một nhân viên]
+        //<<Comment Function>>
+        // Hàm này là: Xóa dữ liệu của một nhân viên khỏi hệ thống bằng ID.
+        //<</.....>>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteEmployee(string id)
         {
@@ -89,9 +95,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Xóa nhân viên thành công" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Kiểm tra in
-        /// </summary>
+        // [API: Nhận yêu cầu POST từ FE để chấm công vào ca làm việc]
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng check-in, đánh dấu nhân viên đã bắt đầu làm việc.
+        //<</.....>>
         [HttpPost("checkin")]
         public async Task<IActionResult> CheckIn([FromBody] CheckInRequest request)
         {
@@ -100,9 +107,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Check-in thành công" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Kiểm tra out
-        /// </summary>
+        // [API: Nhận yêu cầu POST từ FE để chấm công kết thúc ca làm việc]
+        //<<Comment Function>>
+        // Hàm này là: Xử lý chức năng check-out, đánh dấu nhân viên kết thúc giờ làm việc.
+        //<</.....>>
         [HttpPost("checkout")]
         public async Task<IActionResult> CheckOut([FromBody] CheckOutRequest request)
         {
@@ -111,9 +119,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Check-out thành công" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin attendances
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy danh sách điểm danh theo chi nhánh và ngày]
+        //<<Comment Function>>
+        // Hàm này là: Lấy dữ liệu điểm danh của tất cả nhân viên trong một chi nhánh vào ngày được chỉ định.
+        //<</.....>>
         [HttpGet("branch/{branchId}/attendance")]
         public async Task<IActionResult> GetAttendances(string branchId, [FromQuery] string date)
         {
@@ -121,9 +130,10 @@ namespace LunaWash.API.Controllers
             return Ok(attendances);
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin weekly leaves
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy lịch nghỉ hàng tuần theo chi nhánh]
+        //<<Comment Function>>
+        // Hàm này là: Truy xuất thông tin các ngày nghỉ phép trong tuần của nhân viên thuộc chi nhánh.
+        //<</.....>>
         [HttpGet("branch/{branchId}/weekly-leaves")]
         public async Task<IActionResult> GetWeeklyLeaves(string branchId, [FromQuery] string date)
         {

@@ -24,13 +24,12 @@ namespace LunaWash.API.Controllers
             return User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         }
 
-        /// <summary>
-        /// Create a new booking when user books a wash
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Tạo mới một lịch đặt rửa xe khi người dùng thao tác đặt lịch
+        //<</.....>>
+        // [API: POST /api/Bookings, dùng để tạo lịch đặt mới, nhận thông tin đặt lịch từ FE]
         [HttpPost]
         [AllowAnonymous]
-        // BE: ĐÂY LÀ NƠI NHẬN API CHO CHỨC NĂNG: Xử lý Đặt lịch (Booking)
-        // -> Được gọi từ: FE - src/pages/Booking.jsx (Khi user bấm nút Đặt lịch)
         public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequestDTO dto)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -55,9 +54,10 @@ namespace LunaWash.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Get a list of time slots that are already booked
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách các khung giờ đã có người đặt
+        //<</.....>>
+        // [API: GET /api/Bookings/occupied-slots, dùng để lấy giờ đã bị chiếm, nhận date và washSlotId từ query]
         [HttpGet("occupied-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetOccupiedSlots([FromQuery] string date, [FromQuery] string washSlotId)
@@ -69,9 +69,10 @@ namespace LunaWash.API.Controllers
             return Ok(slots);
         }
 
-        /// <summary>
-        /// Get all past and current bookings of the logged-in user
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Lấy toàn bộ lịch sử các lượt đặt (cũ và hiện tại) của người dùng đang đăng nhập
+        //<</.....>>
+        // [API: GET /api/Bookings/history, dùng để lấy lịch sử đặt, yêu cầu token hợp lệ từ FE]
         [HttpGet("history")]
         public async Task<IActionResult> GetBookingHistory()
         {
@@ -82,9 +83,10 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
-        /// <summary>
-        /// Cancel a booking (soft delete, status becomes Canceled)
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Hủy một lịch đặt (xóa mềm, chuyển trạng thái thành Đã hủy)
+        //<</.....>>
+        // [API: DELETE /api/Bookings/{id}, dùng để hủy lịch, nhận id lịch đặt từ URL]
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelBooking(string id)
         {
@@ -97,9 +99,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Hủy lịch đặt thành công." });
         }
 
-        /// <summary>
-        /// Permanently delete a booking from the database
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Xóa vĩnh viễn một lịch đặt khỏi cơ sở dữ liệu
+        //<</.....>>
+        // [API: DELETE /api/Bookings/hard-delete/{id}, dùng để xóa hẳn lịch đặt, nhận id lịch từ URL]
         [HttpDelete("hard-delete/{id}")]
         public async Task<IActionResult> HardDeleteBooking(string id)
         {
@@ -112,9 +115,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Đã xóa bỏ lịch đặt hoàn toàn." });
         }
 
-        /// <summary>
-        /// Find free time slots for a specific branch and date
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Tìm kiếm các khung giờ trống cho một chi nhánh và ngày cụ thể
+        //<</.....>>
+        // [API: GET /api/Bookings/available-slots, dùng để lấy giờ trống, nhận branchId và date từ query]
         [HttpGet("available-slots")]
         [AllowAnonymous]
         public async Task<IActionResult> GetAvailableSlots([FromQuery] string branchId, [FromQuery] string date)
@@ -136,9 +140,10 @@ namespace LunaWash.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Request customer to confirm their arrival (called by Staff)
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Yêu cầu khách hàng xác nhận đã đến nơi (được gọi bởi nhân viên)
+        //<</.....>>
+        // [API: PUT /api/Bookings/{id}/request-start, dùng để gửi yêu cầu xác nhận, nhận id từ URL]
         [HttpPut("{id}/request-start")]
         [AllowAnonymous] // Assuming staff authentication is handled or simplified for now
         public async Task<IActionResult> RequestStart(string id)
@@ -148,9 +153,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Đã gửi yêu cầu xác nhận đến khách hàng." });
         }
 
-        /// <summary>
-        /// Customer confirms their arrival
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Khách hàng xác nhận họ đã đến nơi và sẵn sàng
+        //<</.....>>
+        // [API: PUT /api/Bookings/{id}/confirm-ready, dùng để xác nhận sẵn sàng, nhận id từ URL]
         [HttpPut("{id}/confirm-ready")]
         [AllowAnonymous] 
         public async Task<IActionResult> ConfirmReady(string id)
@@ -160,9 +166,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Đã xác nhận sẵn sàng." });
         }
 
-        /// <summary>
-        /// Get the current confirmation status of a booking
-        /// </summary>
+        //<<Comment Function>>
+        // Hàm này là: Lấy trạng thái xác nhận hiện tại của một lịch đặt
+        //<</.....>>
+        // [API: GET /api/Bookings/{id}/status, dùng để xem trạng thái xác nhận, nhận id từ URL]
         [HttpGet("{id}/status")]
         [AllowAnonymous]
         public async Task<IActionResult> GetConfirmationStatus(string id)
