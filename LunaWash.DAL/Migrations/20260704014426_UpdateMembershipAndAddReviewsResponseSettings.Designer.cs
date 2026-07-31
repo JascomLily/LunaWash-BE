@@ -4,6 +4,7 @@ using LunaWash.DAL.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LunaWash.DAL.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260704014426_UpdateMembershipAndAddReviewsResponseSettings")]
+    partial class UpdateMembershipAndAddReviewsResponseSettings
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -43,9 +46,6 @@ namespace LunaWash.DAL.Migrations
 
                     b.Property<DateTime?>("CheckOutTime")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -364,6 +364,84 @@ namespace LunaWash.DAL.Migrations
                     b.HasIndex("VehicleTypeId");
 
                     b.ToTable("CustomerVehicles");
+                });
+
+            modelBuilder.Entity("LunaWash.DAL.Entities.DailyAttendance", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime?>("CheckInTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("DailyAttendances", (string)null);
+                });
+
+            modelBuilder.Entity("LunaWash.DAL.Entities.EmployeeScheduleTemplate", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
+
+                    b.Property<string>("DayOff")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("EmployeeId")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Shift")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmployeeId");
+
+                    b.ToTable("EmployeeScheduleTemplates", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.Equipment", b =>
@@ -771,7 +849,7 @@ namespace LunaWash.DAL.Migrations
                     b.ToTable("Roles");
                 });
 
-            modelBuilder.Entity("LunaWash.DAL.Entities.ScheduleHistoryLog", b =>
+            modelBuilder.Entity("LunaWash.DAL.Entities.ScheduleHistory", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(50)
@@ -780,7 +858,8 @@ namespace LunaWash.DAL.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("BranchId")
                         .IsRequired()
@@ -789,7 +868,9 @@ namespace LunaWash.DAL.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("(getutcdate())");
 
                     b.Property<string>("EmployeeId")
                         .IsRequired()
@@ -804,10 +885,12 @@ namespace LunaWash.DAL.Migrations
                         .HasColumnType("varchar(50)");
 
                     b.Property<string>("NewValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("OldValue")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
@@ -817,7 +900,7 @@ namespace LunaWash.DAL.Migrations
 
                     b.HasIndex("ModifiedById");
 
-                    b.ToTable("ScheduleHistoryLogs");
+                    b.ToTable("ScheduleHistories", (string)null);
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.ServiceFeature", b =>
@@ -1013,47 +1096,6 @@ namespace LunaWash.DAL.Migrations
                     b.HasKey("UserId");
 
                     b.ToTable("StaffProfiles");
-                });
-
-            modelBuilder.Entity("LunaWash.DAL.Entities.StaffSchedule", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<string>("BranchId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<string>("DayOff")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("EmployeeId")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)");
-
-                    b.Property<string>("Shift")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BranchId");
-
-                    b.HasIndex("EmployeeId");
-
-                    b.ToTable("StaffSchedules");
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.SystemSetting", b =>
@@ -1395,6 +1437,28 @@ namespace LunaWash.DAL.Migrations
                     b.Navigation("VehicleType");
                 });
 
+            modelBuilder.Entity("LunaWash.DAL.Entities.DailyAttendance", b =>
+                {
+                    b.HasOne("LunaWash.DAL.Entities.User", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
+            modelBuilder.Entity("LunaWash.DAL.Entities.EmployeeScheduleTemplate", b =>
+                {
+                    b.HasOne("LunaWash.DAL.Entities.User", "Employee")
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Employee");
+                });
+
             modelBuilder.Entity("LunaWash.DAL.Entities.Equipment", b =>
                 {
                     b.HasOne("LunaWash.DAL.Entities.Branch", "Branch")
@@ -1516,7 +1580,7 @@ namespace LunaWash.DAL.Migrations
                     b.Navigation("CustomerProfile");
                 });
 
-            modelBuilder.Entity("LunaWash.DAL.Entities.ScheduleHistoryLog", b =>
+            modelBuilder.Entity("LunaWash.DAL.Entities.ScheduleHistory", b =>
                 {
                     b.HasOne("LunaWash.DAL.Entities.Branch", "Branch")
                         .WithMany()
@@ -1527,13 +1591,13 @@ namespace LunaWash.DAL.Migrations
                     b.HasOne("LunaWash.DAL.Entities.User", "Employee")
                         .WithMany()
                         .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("LunaWash.DAL.Entities.User", "ModifiedBy")
                         .WithMany()
                         .HasForeignKey("ModifiedById")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.Navigation("Branch");
@@ -1601,25 +1665,6 @@ namespace LunaWash.DAL.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("LunaWash.DAL.Entities.StaffSchedule", b =>
-                {
-                    b.HasOne("LunaWash.DAL.Entities.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("LunaWash.DAL.Entities.User", "Employee")
-                        .WithMany()
-                        .HasForeignKey("EmployeeId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Branch");
-
-                    b.Navigation("Employee");
                 });
 
             modelBuilder.Entity("LunaWash.DAL.Entities.User", b =>

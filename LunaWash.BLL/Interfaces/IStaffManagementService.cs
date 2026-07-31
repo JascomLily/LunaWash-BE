@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using LunaWash.BLL.DTOs;
@@ -6,9 +7,14 @@ namespace LunaWash.BLL.Interfaces
 {
     public interface IStaffManagementService
     {
-        Task<IEnumerable<StaffScheduleDto>> GetSchedulesByBranchAsync(string branchId);
-        Task<bool> SaveSchedulesAsync(string branchId, string managerId, List<StaffScheduleDto> templates);
-        Task<IEnumerable<ScheduleHistoryLogDto>> GetHistoryByBranchAsync(string branchId);
-        Task<bool> SaveAttendanceAsync(string branchId, string shift, List<AttendanceEntryDto> attendances);
+        Task<IEnumerable<UserBranchResponseDto>> GetEmployeesByBranchAsync(string branchId);
+        Task<IEnumerable<DailyAttendanceResponseDto>> GetAttendanceAsync(string branchId, DateTime date, string shift);
+        Task<bool> SaveAttendanceAsync(SaveAttendanceDto dto);
+        Task<IEnumerable<ShiftTemplateResponseDto>> GetShiftTemplatesAsync(string branchId);
+        Task<bool> SaveShiftTemplatesAsync(string branchId, string managerId, SaveShiftTemplatesDto dto);
+        Task<IEnumerable<ScheduleHistoryResponseDto>> GetScheduleHistoryAsync(string branchId);
+        Task<bool> UpdateEmployeeSalaryAsync(string employeeId, decimal salary);
+        Task<bool> UpdateEmployeeLeaveDaysAsync(string employeeId, int leaveDays);
+        Task<bool> ToggleEmployeeActiveAsync(string employeeId, bool isActive);
     }
 }

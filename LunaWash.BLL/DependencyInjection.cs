@@ -13,7 +13,8 @@ namespace LunaWash.BLL
         {
             // 1. Configure DbContext in DAL
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"))
+                       .ConfigureWarnings(warnings => warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
             // 2. Register BLL Services
             services.AddScoped<IAuthService, AuthService>();
@@ -27,14 +28,17 @@ namespace LunaWash.BLL
             services.AddScoped<IServiceManagementService, ServiceManagementService>();
             services.AddScoped<IEquipmentService, EquipmentService>();
             services.AddScoped<IServicePackageService, ServicePackageService>();
+            services.AddScoped<IBranchService, BranchService>();
+            services.AddScoped<IIncidentService, IncidentService>();
+            services.AddScoped<IMaintenanceService, MaintenanceService>();
+            services.AddScoped<IReviewService, ReviewService>();
+            services.AddScoped<ISystemSettingService, SystemSettingService>();
             services.AddScoped<ISettingsService, SettingsService>();
             services.AddScoped<IMembershipService, MembershipService>();
             services.AddScoped<IDashboardService, DashboardService>();
             services.AddScoped<ITicketService, TicketService>();
             services.AddScoped<IVoucherService, VoucherService>();
-            
-            services.AddScoped<IIncidentService, IncidentService>();
-            services.AddScoped<IMaintenanceService, MaintenanceService>();
+
             return services;
         }
     }

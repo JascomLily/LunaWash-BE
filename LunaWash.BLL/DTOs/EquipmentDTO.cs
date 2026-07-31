@@ -85,4 +85,36 @@ namespace LunaWash.BLL.DTOs
         [Required]
         public string Status { get; set; } = null!;
     }
+
+    public class MaintenanceTaskDetailDto
+    {
+        public string Id { get; set; } = null!;
+        public string BranchId { get; set; } = null!;
+        public string EquipmentId { get; set; } = null!;
+        public string EquipmentName { get; set; } = null!;
+        public string TaskName { get; set; } = null!;
+        public string? Description { get; set; }
+        public string Status { get; set; } = null!;
+        public string? AssignedToId { get; set; }
+        public string? AssignedToName { get; set; }
+        public string? Resolution { get; set; }
+        public string? SupportRequest { get; set; }
+        public bool IsIncident { get; set; }
+        public string? Priority { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+    }
+
+    public class MaintenanceTaskAssignDto
+    {
+        public string AssignedToId { get; set; } = null!;
+        public string Priority { get; set; } = "Bình thường";
+    }
+
+    public class MaintenanceTaskUpdateStatusDto
+    {
+        public string Status { get; set; } = null!;
+        public string? Resolution { get; set; }
+        public string? SupportRequest { get; set; }
+    }
 }

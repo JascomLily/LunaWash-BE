@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using LunaWash.DAL.Data;
 using LunaWash.DAL.Entities;
-using LunaWash.BLL.Interfaces;
 using LunaWash.BLL.DTOs;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.BLL.Services
 {
@@ -19,210 +19,237 @@ namespace LunaWash.BLL.Services
             _context = context;
         }
 
-        //<<Comment Function>>
-        // Hàm này là: Truy xuất tất cả lịch làm việc của nhân viên theo mã chi nhánh, bao gồm thông tin nhân viên.
-        //<</.....>>
-        public async Task<IEnumerable<StaffScheduleDto>> GetSchedulesByBranchAsync(string branchId)
+        public async Task<IEnumerable<UserBranchResponseDto>> GetEmployeesByBranchAsync(string branchId)
         {
-            // [Bình thường] Lấy dữ liệu lịch làm việc từ database, kết nối với bảng Employee để lấy tên nhân viên.
-            var schedules = await _context.StaffSchedules
-                .Include(s => s.Employee)
-                .Where(s => s.BranchId == branchId)
+            var employees = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.BranchId == branchId && !u.IsDeleted && u.Role.RoleName != "Customer")
                 .ToListAsync();
 
-            return schedules.Select(s => new StaffScheduleDto
+            return employees.Select(emp => new UserBranchResponseDto
             {
-                Id = s.EmployeeId, // [Bình thường] Gán Id bằng EmployeeId để tương thích với frontend khi map dữ liệu.
-                EmployeeId = s.EmployeeId,
-                FullName = s.Employee.FullName,
-                Shift = s.Shift,
-                DayOff = s.DayOff
-            });
+                Id = emp.Id,
+                FullName = emp.FullName,
+                Email = emp.Email,
+                PhoneNumber = emp.PhoneNumber,
+                RoleName = emp.Role.RoleName,
+                Salary = emp.Salary ?? 6000000, 
+                LeaveDays = emp.LeaveDays ?? 0,
+                IsActive = emp.IsActive
+            }).ToList();
         }
 
-        //<<Comment Function>>
-        // Hàm này là: Lưu hoặc cập nhật danh sách khuôn mẫu lịch làm việc cho nhân viên, kèm theo ghi log lịch sử.
-        //<</.....>>
-        public async Task<bool> SaveSchedulesAsync(string branchId, string managerId, List<StaffScheduleDto> templates)
+        public async Task<IEnumerable<DailyAttendanceResponseDto>> GetAttendanceAsync(string branchId, DateTime date, string shift)
         {
-            if (templates == null || !templates.Any()) return true;
+            var employees = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.BranchId == branchId && !u.IsDeleted && u.Role.RoleName != "Customer" && u.Role.RoleName != "BranchManager")
+                .ToListAsync();
 
-            // [Bình thường] Mở transaction để đảm bảo lưu dữ liệu an toàn, nếu có lỗi sẽ rollback lại.
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
+            var employeeIds = employees.Select(e => e.Id).ToList();
+
+            var attendanceRecords = await _context.Attendances
+                .Where(a => employeeIds.Contains(a.UserId) && a.AttendanceDate.Date == date.Date && a.BranchId == branchId)
+                .ToListAsync();
+
+            var result = new List<DailyAttendanceResponseDto>();
+            foreach (var emp in employees)
             {
-                var existingSchedules = await _context.StaffSchedules
-                    .Where(s => s.BranchId == branchId)
-                    .ToDictionaryAsync(s => s.EmployeeId);
-
-                foreach (var dto in templates)
+                var record = attendanceRecords.FirstOrDefault(r => r.UserId == emp.Id);
+                result.Add(new DailyAttendanceResponseDto
                 {
-                    var employeeExists = await _context.Users.AnyAsync(u => u.Id == dto.EmployeeId && u.BranchId == branchId);
-                    if (!employeeExists) continue; // [Bình thường] Bỏ qua nếu nhân viên không tồn tại hoặc không thuộc chi nhánh này.
+                    EmployeeId = emp.Id,
+                    FullName = emp.FullName,
+                    RoleName = emp.Role.RoleName,
+                    Status = record?.Status ?? "Vắng mặt",
+                    CheckInTime = record?.CheckInTime?.AddHours(7).ToString("HH:mm"),
+                    Notes = record?.Note
+                });
+            }
+            return result;
+        }
 
-                    if (existingSchedules.TryGetValue(dto.EmployeeId, out var existing))
+        public async Task<bool> SaveAttendanceAsync(SaveAttendanceDto dto)
+        {
+            var today = DateTime.UtcNow.Date;
+            var employeeIds = dto.Attendances.Select(a => a.EmployeeId).ToList();
+            var existingRecords = await _context.Attendances
+                .Where(a => employeeIds.Contains(a.UserId) && a.AttendanceDate.Date == today)
+                .ToListAsync();
+
+            foreach (var att in dto.Attendances)
+            {
+                var record = existingRecords.FirstOrDefault(r => r.UserId == att.EmployeeId);
+
+                if (record != null)
+                {
+                    record.Status = att.Status;
+                    record.Note = att.Note;
+                    if (att.Status == "Có mặt" && record.CheckInTime == null)
                     {
-                        // [Bình thường] Kiểm tra nếu có sự thay đổi ca làm việc hoặc ngày nghỉ để ghi lại lịch sử.
-                        if (existing.Shift != dto.Shift)
-                        {
-                            var log = new ScheduleHistoryLog
-                            {
-                                Id = Guid.NewGuid().ToString(),
-                                BranchId = branchId,
-                                EmployeeId = dto.EmployeeId,
-                                ModifiedById = managerId,
-                                Action = "Cập nhật ca làm",
-                                OldValue = existing.Shift,
-                                NewValue = dto.Shift,
-                                CreatedAt = DateTime.UtcNow
-                            };
-                            _context.ScheduleHistoryLogs.Add(log);
-                            existing.Shift = dto.Shift;
-                        }
-
-                        if (existing.DayOff != dto.DayOff)
-                        {
-                            var log = new ScheduleHistoryLog
-                            {
-                                Id = Guid.NewGuid().ToString(),
-                                BranchId = branchId,
-                                EmployeeId = dto.EmployeeId,
-                                ModifiedById = managerId,
-                                Action = "Cập nhật ngày nghỉ",
-                                OldValue = existing.DayOff,
-                                NewValue = dto.DayOff,
-                                CreatedAt = DateTime.UtcNow
-                            };
-                            _context.ScheduleHistoryLogs.Add(log);
-                            existing.DayOff = dto.DayOff;
-                        }
-
-                        existing.UpdatedAt = DateTime.UtcNow;
+                        record.CheckInTime = DateTime.UtcNow;
                     }
-                    else
+                }
+                else
+                {
+                    record = new Attendance
                     {
-                        // [Bình thường] Thêm mới lịch làm việc nếu nhân viên chưa có lịch trước đó.
-                        var newSchedule = new StaffSchedule
-                        {
-                            Id = Guid.NewGuid().ToString(),
-                            EmployeeId = dto.EmployeeId,
-                            BranchId = branchId,
-                            Shift = dto.Shift,
-                            DayOff = dto.DayOff,
-                            UpdatedAt = DateTime.UtcNow
-                        };
-                        _context.StaffSchedules.Add(newSchedule);
+                        Id = "ATT-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                        UserId = att.EmployeeId,
+                        BranchId = dto.BranchId,
+                        AttendanceDate = today,
+                        Status = att.Status,
+                        Note = att.Note,
+                        CheckInTime = att.Status == "Có mặt" ? DateTime.UtcNow : null
+                    };
+                    _context.Attendances.Add(record);
+                }
+            }
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
-                        var log = new ScheduleHistoryLog
+        public async Task<IEnumerable<ShiftTemplateResponseDto>> GetShiftTemplatesAsync(string branchId)
+        {
+            var employees = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.BranchId == branchId && !u.IsDeleted && u.Role.RoleName != "Customer" && u.Role.RoleName != "BranchManager")
+                .ToListAsync();
+
+            var employeeIds = employees.Select(e => e.Id).ToList();
+
+            var templates = await _context.StaffSchedules
+                .Where(t => employeeIds.Contains(t.EmployeeId))
+                .ToListAsync();
+
+            var result = new List<ShiftTemplateResponseDto>();
+            foreach (var emp in employees)
+            {
+                var temp = templates.FirstOrDefault(t => t.EmployeeId == emp.Id);
+                result.Add(new ShiftTemplateResponseDto
+                {
+                    Id = emp.Id,
+                    Shift = temp?.Shift ?? "Ca sáng",
+                    DayOff = temp?.DayOff ?? "Thứ Hai"
+                });
+            }
+            return result;
+        }
+
+        public async Task<bool> SaveShiftTemplatesAsync(string branchId, string managerId, SaveShiftTemplatesDto dto)
+        {
+            foreach (var item in dto.Templates)
+            {
+                var existing = await _context.StaffSchedules
+                    .FirstOrDefaultAsync(t => t.EmployeeId == item.EmployeeId);
+
+                if (existing != null)
+                {
+                    string oldVal = $"Ca: {existing.Shift}, Nghỉ: {existing.DayOff}";
+                    string newVal = $"Ca: {item.Shift}, Nghỉ: {item.DayOff}";
+
+                    if (existing.Shift != item.Shift || existing.DayOff != item.DayOff)
+                    {
+                        existing.Shift = item.Shift;
+                        existing.DayOff = item.DayOff;
+                        existing.UpdatedAt = DateTime.UtcNow;
+
+                        // Log history
+                        var history = new ScheduleHistoryLog
                         {
-                            Id = Guid.NewGuid().ToString(),
+                            Id = "HIS-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
                             BranchId = branchId,
-                            EmployeeId = dto.EmployeeId,
                             ModifiedById = managerId,
-                            Action = "Thiết lập lịch làm",
-                            OldValue = null,
-                            NewValue = $"{dto.Shift} / {dto.DayOff}",
+                            EmployeeId = item.EmployeeId,
+                            Action = "Cập nhật ca trực",
+                            OldValue = oldVal,
+                            NewValue = newVal,
                             CreatedAt = DateTime.UtcNow
                         };
-                        _context.ScheduleHistoryLogs.Add(log);
+                        _context.ScheduleHistoryLogs.Add(history);
                     }
                 }
+                else
+                {
+                    var template = new StaffSchedule
+                    {
+                        Id = "TMP-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                        EmployeeId = item.EmployeeId,
+                        BranchId = branchId,
+                        Shift = item.Shift,
+                        DayOff = item.DayOff,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.StaffSchedules.Add(template);
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
+                    // Log history
+                    var history = new ScheduleHistoryLog
+                    {
+                        Id = "HIS-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper(),
+                        BranchId = branchId,
+                        ModifiedById = managerId,
+                        EmployeeId = item.EmployeeId,
+                        Action = "Phân ca trực mới",
+                        OldValue = null,
+                        NewValue = $"Ca: {item.Shift}, Nghỉ: {item.DayOff}",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.ScheduleHistoryLogs.Add(history);
+                }
             }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+            await _context.SaveChangesAsync();
+            return true;
         }
 
-        //<<Comment Function>>
-        // Hàm này là: Lấy danh sách nhật ký thay đổi lịch làm việc của một chi nhánh, sắp xếp từ mới đến cũ.
-        //<</.....>>
-        public async Task<IEnumerable<ScheduleHistoryLogDto>> GetHistoryByBranchAsync(string branchId)
+        public async Task<IEnumerable<ScheduleHistoryResponseDto>> GetScheduleHistoryAsync(string branchId)
         {
-            // [Bình thường] Gọi truy vấn database để lấy các bản ghi log, kèm thông tin người thay đổi và nhân viên.
-            var logs = await _context.ScheduleHistoryLogs
-                .Include(l => l.Employee)
-                .Include(l => l.ModifiedBy)
-                .Where(l => l.BranchId == branchId)
-                .OrderByDescending(l => l.CreatedAt)
+            var history = await _context.ScheduleHistoryLogs
+                .Include(h => h.ModifiedBy)
+                .Include(h => h.Employee)
+                .Where(h => h.BranchId == branchId)
+                .OrderByDescending(h => h.CreatedAt)
                 .ToListAsync();
 
-            return logs.Select(l => new ScheduleHistoryLogDto
+            return history.Select(h => new ScheduleHistoryResponseDto
             {
-                Id = l.Id,
-                CreatedAt = l.CreatedAt,
-                ModifiedByFullName = l.ModifiedBy.FullName,
-                Action = l.Action,
-                EmployeeFullName = l.Employee.FullName,
-                OldValue = l.OldValue,
-                NewValue = l.NewValue
-            });
+                Id = h.Id,
+                CreatedAt = h.CreatedAt,
+                ModifiedByFullName = h.ModifiedBy?.FullName ?? "Quản lý",
+                Action = h.Action,
+                EmployeeFullName = h.Employee?.FullName ?? "Nhân viên",
+                OldValue = h.OldValue,
+                NewValue = h.NewValue
+            }).ToList();
         }
 
-        //<<Comment Function>>
-        // Hàm này là: Xử lý lưu dữ liệu điểm danh, cập nhật thời gian check-in/check-out tùy thuộc vào trạng thái.
-        //<</.....>>
-        public async Task<bool> SaveAttendanceAsync(string branchId, string shift, List<AttendanceEntryDto> attendances)
+        public async Task<bool> UpdateEmployeeSalaryAsync(string employeeId, decimal salary)
         {
-            if (attendances == null || !attendances.Any()) return true;
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
 
-            var today = DateTime.UtcNow.Date;
+            user.Salary = salary;
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-            try
-            {
-                foreach (var entry in attendances)
-                {
-                    var attendance = await _context.Attendances
-                        .FirstOrDefaultAsync(a => a.UserId == entry.EmployeeId && a.AttendanceDate == today && a.BranchId == branchId);
+        public async Task<bool> UpdateEmployeeLeaveDaysAsync(string employeeId, int leaveDays)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
 
-                    if (attendance == null)
-                    {
-                        attendance = new Attendance
-                        {
-                            Id = Guid.NewGuid().ToString(),
-                            UserId = entry.EmployeeId,
-                            BranchId = branchId,
-                            AttendanceDate = today,
-                            Status = entry.Status,
-                            Note = entry.Note,
-                            CheckInTime = entry.Status == "Present" || entry.Status == "Late" ? DateTime.UtcNow : null
-                        };
-                        _context.Attendances.Add(attendance);
-                    }
-                    else
-                    {
-                        attendance.Status = entry.Status;
-                        attendance.Note = entry.Note;
-                        if (entry.Status == "Present" || entry.Status == "Late")
-                        {
-                            if (attendance.CheckInTime == null)
-                            {
-                                attendance.CheckInTime = DateTime.UtcNow;
-                            }
-                        }
-                        else
-                        {
-                            attendance.CheckInTime = null;
-                            attendance.CheckOutTime = null;
-                        }
-                    }
-                }
+            user.LeaveDays = leaveDays;
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-                return true;
-            }
-            catch (Exception)
-            {
-                await transaction.RollbackAsync();
-                return false;
-            }
+        public async Task<bool> ToggleEmployeeActiveAsync(string employeeId, bool isActive)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == employeeId && !u.IsDeleted);
+            if (user == null) return false;
+
+            user.IsActive = isActive;
+            await _context.SaveChangesAsync();
+            return true;
         }
     }
 }

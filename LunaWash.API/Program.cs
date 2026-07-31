@@ -83,8 +83,15 @@ var app = builder.Build();
 // Migrate DB < Tự động cập nhật các bảng vào Database SQL mỗi khi chạy server > <Rất quan trọng>
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<LunaWash.DAL.Data.ApplicationDbContext>();
-    dbContext.Database.Migrate();
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<LunaWash.DAL.Data.ApplicationDbContext>();
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine("[Migration Warning] Database Migration skipped or encountered warning: " + ex.Message);
+    }
 }
 
 // Configure the HTTP request pipeline.
