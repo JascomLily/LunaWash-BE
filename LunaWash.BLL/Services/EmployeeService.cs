@@ -85,7 +85,7 @@ namespace LunaWash.BLL.Services
                 FullName = dto.FullName,
                 Email = dto.Email,
                 PhoneNumber = dto.PhoneNumber,
-                Password = password,
+                Password = BCrypt.Net.BCrypt.HashPassword(password),
                 RoleId = dto.RoleId,
                 BranchId = dto.BranchId,
                 IsActive = true,
