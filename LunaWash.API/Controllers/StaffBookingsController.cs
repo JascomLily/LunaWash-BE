@@ -19,9 +19,10 @@ namespace LunaWash.API.Controllers
         }
 
         
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin today queue
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy danh sách lịch đặt (queue) trong ngày của chi nhánh]
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách các đơn đặt dịch vụ hôm nay của chi nhánh, có thể lọc theo ngày.
+        //<</.....>>
         [HttpGet("today/{branchId}")]
         public async Task<IActionResult> GetTodayQueue(string branchId, [FromQuery] string? date)
         {
@@ -29,9 +30,10 @@ namespace LunaWash.API.Controllers
             return Ok(bookings);
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Lấy danh sách / thông tin branch history
-        /// </summary>
+        // [API: Nhận yêu cầu GET từ FE để lấy lịch sử đơn hàng của chi nhánh]
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách lịch sử tất cả các lịch đặt dịch vụ của một chi nhánh cụ thể.
+        //<</.....>>
         [HttpGet("history/{branchId}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetBranchHistory(string branchId)
@@ -41,9 +43,10 @@ namespace LunaWash.API.Controllers
         }
 
       
-        /// <summary>
-        /// API xử lý chức năng: Cập nhật status
-        /// </summary>
+        // [API: Nhận yêu cầu PUT từ FE để cập nhật trạng thái đơn đặt dịch vụ]
+        //<<Comment Function>>
+        // Hàm này là: Cập nhật trạng thái của một lịch đặt dịch vụ (ví dụ: hoàn thành, hủy).
+        //<</.....>>
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] UpdateBookingStatusDTO dto)
         {
@@ -55,9 +58,10 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = $"Đã cập nhật trạng thái thành: {dto.Status}" });
         }
 
-        /// <summary>
-        /// API xử lý chức năng: Thêm interior cleaning
-        /// </summary>
+        // [API: Nhận yêu cầu PUT từ FE để thêm dịch vụ dọn nội thất vào đơn đặt dịch vụ]
+        //<<Comment Function>>
+        // Hàm này là: Thêm dịch vụ dọn nội thất vào một lịch đặt hiện có.
+        //<</.....>>
         [HttpPut("{id}/add-interior-cleaning")]
         public async Task<IActionResult> AddInteriorCleaning(string id)
         {

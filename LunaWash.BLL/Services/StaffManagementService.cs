@@ -19,8 +19,12 @@ namespace LunaWash.BLL.Services
             _context = context;
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Truy xuất tất cả lịch làm việc của nhân viên theo mã chi nhánh, bao gồm thông tin nhân viên.
+        //<</.....>>
         public async Task<IEnumerable<StaffScheduleDto>> GetSchedulesByBranchAsync(string branchId)
         {
+            // [Bình thường] Lấy dữ liệu lịch làm việc từ database, kết nối với bảng Employee để lấy tên nhân viên.
             var schedules = await _context.StaffSchedules
                 .Include(s => s.Employee)
                 .Where(s => s.BranchId == branchId)
@@ -28,7 +32,7 @@ namespace LunaWash.BLL.Services
 
             return schedules.Select(s => new StaffScheduleDto
             {
-                Id = s.EmployeeId, // map to Id so frontend's t.id mapping works
+                Id = s.EmployeeId, // [Bình thường] Gán Id bằng EmployeeId để tương thích với frontend khi map dữ liệu.
                 EmployeeId = s.EmployeeId,
                 FullName = s.Employee.FullName,
                 Shift = s.Shift,
@@ -36,10 +40,14 @@ namespace LunaWash.BLL.Services
             });
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lưu hoặc cập nhật danh sách khuôn mẫu lịch làm việc cho nhân viên, kèm theo ghi log lịch sử.
+        //<</.....>>
         public async Task<bool> SaveSchedulesAsync(string branchId, string managerId, List<StaffScheduleDto> templates)
         {
             if (templates == null || !templates.Any()) return true;
 
+            // [Bình thường] Mở transaction để đảm bảo lưu dữ liệu an toàn, nếu có lỗi sẽ rollback lại.
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
@@ -50,11 +58,11 @@ namespace LunaWash.BLL.Services
                 foreach (var dto in templates)
                 {
                     var employeeExists = await _context.Users.AnyAsync(u => u.Id == dto.EmployeeId && u.BranchId == branchId);
-                    if (!employeeExists) continue; // Skip if employee doesn't exist or is not in this branch
+                    if (!employeeExists) continue; // [Bình thường] Bỏ qua nếu nhân viên không tồn tại hoặc không thuộc chi nhánh này.
 
                     if (existingSchedules.TryGetValue(dto.EmployeeId, out var existing))
                     {
-                        // Check for changes and log history
+                        // [Bình thường] Kiểm tra nếu có sự thay đổi ca làm việc hoặc ngày nghỉ để ghi lại lịch sử.
                         if (existing.Shift != dto.Shift)
                         {
                             var log = new ScheduleHistoryLog
@@ -93,7 +101,7 @@ namespace LunaWash.BLL.Services
                     }
                     else
                     {
-                        // New schedule assignment
+                        // [Bình thường] Thêm mới lịch làm việc nếu nhân viên chưa có lịch trước đó.
                         var newSchedule = new StaffSchedule
                         {
                             Id = Guid.NewGuid().ToString(),
@@ -131,8 +139,12 @@ namespace LunaWash.BLL.Services
             }
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Lấy danh sách nhật ký thay đổi lịch làm việc của một chi nhánh, sắp xếp từ mới đến cũ.
+        //<</.....>>
         public async Task<IEnumerable<ScheduleHistoryLogDto>> GetHistoryByBranchAsync(string branchId)
         {
+            // [Bình thường] Gọi truy vấn database để lấy các bản ghi log, kèm thông tin người thay đổi và nhân viên.
             var logs = await _context.ScheduleHistoryLogs
                 .Include(l => l.Employee)
                 .Include(l => l.ModifiedBy)
@@ -152,6 +164,9 @@ namespace LunaWash.BLL.Services
             });
         }
 
+        //<<Comment Function>>
+        // Hàm này là: Xử lý lưu dữ liệu điểm danh, cập nhật thời gian check-in/check-out tùy thuộc vào trạng thái.
+        //<</.....>>
         public async Task<bool> SaveAttendanceAsync(string branchId, string shift, List<AttendanceEntryDto> attendances)
         {
             if (attendances == null || !attendances.Any()) return true;
