@@ -6,12 +6,11 @@ namespace LunaWash.BLL.Interfaces
 {
     public interface IMaintenanceService
     {
-        Task<IEnumerable<MaintenanceTaskDetailDto>> GetTasksByTechnicianAsync(string techId);
-        Task<IEnumerable<MaintenanceTaskDetailDto>> GetTasksByBranchAsync(string branchId);
-        Task<bool> UpdateTaskStatusAsync(string id, string techId, MaintenanceTaskUpdateStatusDto dto);
-        Task<bool> ConfirmTaskCompletionAsync(string id);
-        Task<bool> AssignTaskAsync(string id, string assignedToId, string priority);
-        Task<EquipmentCheckLogResponseDto?> CreateCheckLogAsync(string branchId, string techId, EquipmentCheckLogCreateDto dto);
-        Task<IEnumerable<EquipmentCheckLogResponseDto>> GetCheckLogsByBranchAsync(string branchId);
+        Task<MaintenanceResponse> CreateMaintenanceTaskAsync(CreateMaintenanceRequest request);
+        Task<IEnumerable<MaintenanceResponse>> GetMaintenanceTasksByBranchAsync(string branchId);
+        Task<IEnumerable<MaintenanceResponse>> GetMaintenanceTasksByAssigneeAsync(string assigneeId);
+        Task<MaintenanceResponse?> GetMaintenanceTaskByIdAsync(string taskId);
+        Task<bool> UpdateMaintenanceTaskStatusAsync(string taskId, UpdateMaintenanceStatusRequest request);
+        Task<bool> AssignMaintenanceTaskAsync(string taskId, string assigneeId);
     }
 }

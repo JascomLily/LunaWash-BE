@@ -19,11 +19,14 @@ namespace LunaWash.BLL.Services
             _context = context;
         }
 
-        public async Task<EquipmentDashboardDTO> GetDashboardAsync(string branchId)
+        public async Task<EquipmentDashboardDTO> GetDashboardAsync(string branchId, string? washSlotId = null)
         {
-            var equipments = await _context.Equipments
-                .Where(e => e.BranchId == branchId)
-                .ToListAsync();
+            var equipmentsQuery = _context.Equipments.Where(e => e.BranchId == branchId);
+            if (!string.IsNullOrEmpty(washSlotId))
+            {
+                equipmentsQuery = equipmentsQuery.Where(e => e.WashSlotId == washSlotId);
+            }
+            var equipments = await equipmentsQuery.ToListAsync();
 
             var tasks = await _context.MaintenanceTasks
                 .Where(t => t.BranchId == branchId)

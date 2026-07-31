@@ -1,120 +1,92 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+using LunaWash.DAL.Data;
+using LunaWash.DAL.Entities;
 using LunaWash.BLL.DTOs;
-using LunaWash.BLL.Interfaces;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
-namespace LunaWash.API.Controllers
+namespace LunaWash.API.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class BannersController : ControllerBase
 {
-    [Route("api/[controller]")]
-    [Route("[controller]")]
-    [ApiController]
-    public class BannersController : ControllerBase
+    private readonly ApplicationDbContext _context;
+
+    public BannersController(ApplicationDbContext context)
     {
-        private readonly IBannerService _bannerService;
+        _context = context;
+    }
 
-        public BannersController(IBannerService bannerService)
-        {
-            _bannerService = bannerService;
-        }
+    /// <summary>
+    /// API xử lý chức năng: Lấy danh sách / thông tin banners
+    /// </summary>
+    [HttpGet]
+    public async Task<IActionResult> GetBanners([FromQuery] string platform = "Web")
+    {
+        var banners = await _context.Banners
+            .Include(b => b.Voucher)
+            .Where(b => b.PlatformType == platform)
+            .ToListAsync();
 
-        [HttpGet]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetAllBanners([FromQuery] bool activeOnly = false)
+        var dtos = banners.Select(b => new BannerDto
         {
-            try
+            Id = b.Id,
+            ImageUrl = b.ImageUrl,
+            VoucherId = b.VoucherId,
+            PlatformType = b.PlatformType,
+            IsHidden = b.IsHidden,
+            Voucher = b.Voucher != null ? new VoucherDto
             {
-                var banners = await _bannerService.GetAllBannersAsync(activeOnly);
-                return Ok(banners);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
-        }
+                Id = b.Voucher.Id,
+                VoucherName = b.Voucher.VoucherName,
+                Description = b.Voucher.Description,
+                DiscountValue = b.Voucher.DiscountValue,
+                ExpiryDate = b.Voucher.ExpiryDate
+            } : null
+        });
 
-        [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetBannerById(string id)
-        {
-            try
-            {
-                var banner = await _bannerService.GetBannerByIdAsync(id);
-                if (banner == null) return NotFound(new { message = "Không tìm thấy banner." });
-                return Ok(banner);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
-        }
+        return Ok(new { success = true, data = dtos });
+    }
 
-        [HttpPost]
-        [Authorize] // Can restrict to Admin roles later
-        public async Task<IActionResult> CreateBanner([FromBody] BannerCreateUpdateDto dto)
-        {
-            try
-            {
-                if (!ModelState.IsValid) return BadRequest(ModelState);
-                var banner = await _bannerService.CreateBannerAsync(dto);
-                return CreatedAtAction(nameof(GetBannerById), new { id = banner.Id }, banner);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+    /// <summary>
+    /// API xử lý chức năng: Save banners
+    /// </summary>
+    [HttpPost("save")]
+    public async Task<IActionResult> SaveBanners([FromBody] List<SaveBannerDto> bannerDtos)
+    {
+        // Frontend gửi toàn bộ danh sách banner của cả Web và App trong một request
+        // Vì vậy, chúng ta sẽ xóa toàn bộ banner hiện tại và lưu lại danh sách mới
+        var existingBanners = await _context.Banners.ToListAsync();
+        _context.Banners.RemoveRange(existingBanners);
 
-        [HttpPut("{id}")]
-        [Authorize]
-        public async Task<IActionResult> UpdateBanner(string id, [FromBody] BannerCreateUpdateDto dto)
+        var newBanners = bannerDtos.Select(dto => new Banner
         {
-            try
-            {
-                if (!ModelState.IsValid) return BadRequest(ModelState);
-                var success = await _bannerService.UpdateBannerAsync(id, dto);
-                if (!success) return NotFound(new { message = "Không tìm thấy banner." });
-                return Ok(new { message = "Cập nhật banner thành công." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+            ImageUrl = dto.ImageUrl,
+            VoucherId = string.IsNullOrEmpty(dto.VoucherId) ? null : dto.VoucherId,
+            PlatformType = dto.PlatformType,
+            IsHidden = dto.IsHidden || string.IsNullOrEmpty(dto.ImageUrl)
+        }).ToList();
 
-        [HttpDelete("{id}")]
-        [Authorize]
-        public async Task<IActionResult> DeleteBanner(string id)
-        {
-            try
-            {
-                var success = await _bannerService.DeleteBannerAsync(id);
-                if (!success) return NotFound(new { message = "Không tìm thấy banner." });
-                return Ok(new { message = "Xóa banner thành công." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+        await _context.Banners.AddRangeAsync(newBanners);
+        await _context.SaveChangesAsync();
 
-        [HttpPost("bulk")]
-        [Authorize]
-        public async Task<IActionResult> SaveBannersBulk([FromBody] IEnumerable<BannerCreateUpdateDto> dtos)
-        {
-            try
-            {
-                if (!ModelState.IsValid) return BadRequest(ModelState);
-                var success = await _bannerService.SaveBannersBulkAsync(dtos);
-                if (!success) return BadRequest(new { message = "Không thể lưu danh sách banner." });
-                return Ok(new { message = "Lưu danh sách banner thành công." });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+        return Ok(new { success = true, message = "Banners saved successfully" });
+    }
+
+    /// <summary>
+    /// API xử lý chức năng: Tải lên banner photo
+    /// </summary>
+    [HttpPost("upload")]
+    public async Task<IActionResult> UploadBannerPhoto([FromForm] Microsoft.AspNetCore.Http.IFormFile file, [FromServices] LunaWash.BLL.Interfaces.IPhotoService photoService)
+    {
+        if (file == null || file.Length == 0) return BadRequest("No file uploaded");
+
+        var url = await photoService.UploadPhotoAsync(file);
+        if (string.IsNullOrEmpty(url)) return BadRequest("Failed to upload image");
+
+        return Ok(new { success = true, url });
     }
 }

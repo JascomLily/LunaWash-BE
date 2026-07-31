@@ -33,6 +33,7 @@ namespace LunaWash.API.BackgroundServices
                 try
                 {
                     await CleanupPendingBookingsAsync(stoppingToken);
+                    await SendUpcomingBookingNotificationsAsync(stoppingToken);
                 }
                 catch (Exception ex)
                 {
@@ -55,7 +56,7 @@ namespace LunaWash.API.BackgroundServices
 
             // Lấy danh sách booking quá hạn
             var expiredBookings = await context.Bookings
-                .Where(b => b.Status == "Pending" && b.CreatedAt < thresholdTime)
+                .Where(b => b.Status == "Pending" && b.CreatedAt < thresholdTime && b.Notes != null && b.Notes.Contains("vnpay"))
                 .ToListAsync(cancellationToken);
 
             if (!expiredBookings.Any())
@@ -63,7 +64,7 @@ namespace LunaWash.API.BackgroundServices
                 return;
             }
 
-            _logger.LogInformation($"Found {expiredBookings.Count} expired 'Pending' bookings. Initiating Hard Delete...");
+            _logger.LogInformation($"Found {expiredBookings.Count} expired 'Pending' VNPay bookings. Initiating Hard Delete...");
 
             foreach (var booking in expiredBookings)
             {
@@ -107,12 +108,49 @@ namespace LunaWash.API.BackgroundServices
                     context.PointHistories.RemoveRange(pointHistories);
                 }
 
-                // 2. Xóa Booking (Tối ưu Database)
+                // 2. Xóa Booking (Hard Delete)
                 context.Bookings.Remove(booking);
             }
 
             await context.SaveChangesAsync(cancellationToken);
-            _logger.LogInformation($"Successfully cleaned up {expiredBookings.Count} expired 'Pending' bookings.");
+            _logger.LogInformation("Successfully hard deleted expired 'Pending' VNPay bookings.");
+        }
+
+        private async Task SendUpcomingBookingNotificationsAsync(CancellationToken cancellationToken)
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var notificationService = scope.ServiceProvider.GetRequiredService<LunaWash.BLL.Interfaces.INotificationService>();
+
+            var nowVn = DateTime.UtcNow.AddHours(7);
+            var threshold = nowVn.AddMinutes(30);
+
+            var upcomingBookings = await context.Bookings
+                .Include(b => b.Branch)
+                .Where(b => (b.Status == "Confirmed" || b.Status == "Pending") && b.ScheduledStartTime > nowVn && b.ScheduledStartTime <= threshold)
+                .ToListAsync(cancellationToken);
+
+            if (!upcomingBookings.Any()) return;
+
+            // Kiểm tra xem đã gửi thông báo chưa (Dựa vào Title có chứa BookingId)
+            var upcomingIds = upcomingBookings.Select(b => b.Id).ToList();
+            var alreadyNotified = await context.Notifications
+                .Where(n => n.Type == "Reminder" && upcomingIds.Any(id => n.Title.Contains(id)))
+                .Select(n => n.Title)
+                .ToListAsync(cancellationToken);
+
+            foreach (var booking in upcomingBookings)
+            {
+                if (!alreadyNotified.Any(title => title.Contains(booking.Id)))
+                {
+                    await notificationService.CreateNotificationAsync(
+                        booking.CustomerId,
+                        $"Nhắc nhở lịch hẹn {booking.Id}",
+                        $"Chỉ còn khoảng 30 phút nữa là đến lịch rửa xe của bạn lúc {booking.ScheduledStartTime:HH:mm} tại chi nhánh {booking.Branch?.BranchName ?? "LunaWash"}. Vui lòng đến đúng giờ nhé!",
+                        "Reminder"
+                    );
+                }
+            }
         }
     }
 }

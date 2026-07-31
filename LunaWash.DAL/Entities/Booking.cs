@@ -39,6 +39,10 @@ public partial class Booking
 
     public bool IsDeleted { get; set; }
 
+    public bool IsStartRequested { get; set; } = false;
+
+    public bool CustomerConfirmedReady { get; set; } = false;
+
     public virtual Branch Branch { get; set; } = null!;
 
     public virtual ServiceReview? ServiceReview { get; set; }
@@ -50,4 +54,6 @@ public partial class Booking
     public virtual WashSlot? WashSlot { get; set; }
 
     public virtual ICollection<BookingService> BookingServices { get; set; } = new List<BookingService>();
+
+    public virtual ICollection<CustomerVoucher> CustomerVouchers { get; set; } = new List<CustomerVoucher>();
 }

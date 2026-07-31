@@ -7,18 +7,15 @@ namespace LunaWash.BLL.DTOs
     {
         public string Id { get; set; } = null!;
         public string BookingId { get; set; } = null!;
-        public string? BranchId { get; set; }
         public double OverallRating { get; set; }
         public int CleanlinessRating { get; set; }
         public int SpeedRating { get; set; }
         public int StaffRating { get; set; }
         public string? Comment { get; set; }
         public DateTime CreatedAt { get; set; }
-        public string? ResponseText { get; set; }
-        public string? RespondedById { get; set; }
-        public string? RespondedByName { get; set; }
-        public DateTime? RespondedAt { get; set; }
         public string? CustomerName { get; set; }
+        public string? VehicleInfo { get; set; }
+        public string? Reply { get; set; }
     }
 
     public class CreateReviewDto
@@ -60,10 +57,10 @@ namespace LunaWash.BLL.DTOs
         public string? Comment { get; set; }
     }
 
-    public class ReviewRespondDto
+    public class ReplyReviewRequestDto
     {
         [Required]
-        [MaxLength(1000)]
-        public string ResponseText { get; set; } = null!;
+        [MaxLength(2000)]
+        public string ReplyText { get; set; } = null!;
     }
 }

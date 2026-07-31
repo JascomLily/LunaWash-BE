@@ -67,7 +67,14 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<ServiceFeature> ServiceFeatures { get; set; }
 
-    public virtual DbSet<Promotion> Promotions { get; set; }
+    public virtual DbSet<Voucher> Vouchers { get; set; }
+
+    public virtual DbSet<CustomerVoucher> CustomerVouchers { get; set; }
+    public virtual DbSet<Banner> Banners { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
+    public virtual DbSet<StaffSchedule> StaffSchedules { get; set; }
+    public virtual DbSet<ScheduleHistoryLog> ScheduleHistoryLogs { get; set; }
+    public virtual DbSet<IncidentReport> IncidentReports { get; set; }
 
     public virtual DbSet<Banner> Banners { get; set; }
 
@@ -97,7 +104,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CustomerId)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Notes);
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValue("Pending");
@@ -211,7 +218,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.PointsMultiplier)
                 .HasDefaultValue(1.00m)
                 .HasColumnType("decimal(5, 2)");
-            entity.Property(e => e.PriorityLevel).HasDefaultValue(1);
             entity.Property(e => e.TierName).HasMaxLength(50);
         });
 
@@ -418,6 +424,7 @@ public partial class ApplicationDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+<<<<<<< HEAD
         modelBuilder.Entity<Banner>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -480,6 +487,43 @@ public partial class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.RespondedById)
                 .OnDelete(DeleteBehavior.NoAction);
+=======
+        modelBuilder.Entity<CustomerVoucher>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.CustomerId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.RedeemedDate).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.UsedAtBookingId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.VoucherId).HasMaxLength(50).IsUnicode(false);
+
+            entity.HasOne(d => d.Voucher).WithMany(p => p.CustomerVouchers)
+                .HasForeignKey(d => d.VoucherId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Vouchers");
+
+            entity.HasOne(d => d.Customer).WithMany(p => p.CustomerVouchers)
+                .HasForeignKey(d => d.CustomerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Users");
+
+            entity.HasOne(d => d.UsedAtBooking).WithMany(p => p.CustomerVouchers)
+                .HasForeignKey(d => d.UsedAtBookingId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_CustomerVouchers_Bookings");
+        });
+
+        modelBuilder.Entity<Voucher>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.DiscountValue).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.VoucherName).HasMaxLength(150);
+>>>>>>> origin/main
         });
 
         modelBuilder.Entity<StaffSchedule>(entity =>
@@ -506,6 +550,7 @@ public partial class ApplicationDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasMaxLength(50).IsUnicode(false);
+<<<<<<< HEAD
             entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
             entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
             entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
@@ -514,6 +559,11 @@ public partial class ApplicationDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(d => d.BranchId)
                 .OnDelete(DeleteBehavior.Cascade);
+=======
+            entity.Property(e => e.EmployeeId).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.ModifiedById).HasMaxLength(50).IsUnicode(false);
+            entity.Property(e => e.BranchId).HasMaxLength(50).IsUnicode(false);
+>>>>>>> origin/main
 
             entity.HasOne(d => d.Employee)
                 .WithMany()
@@ -523,7 +573,16 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.ModifiedBy)
                 .WithMany()
                 .HasForeignKey(d => d.ModifiedById)
+<<<<<<< HEAD
                 .OnDelete(DeleteBehavior.Restrict);
+=======
+                .OnDelete(DeleteBehavior.Restrict); // Avoid multiple cascade paths
+
+            entity.HasOne(d => d.Branch)
+                .WithMany()
+                .HasForeignKey(d => d.BranchId)
+                .OnDelete(DeleteBehavior.Cascade);
+>>>>>>> origin/main
         });
 
         OnModelCreatingPartial(modelBuilder);

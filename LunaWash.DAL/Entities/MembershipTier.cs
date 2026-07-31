@@ -10,16 +10,14 @@ public partial class MembershipTier
     public string TierName { get; set; } = null!;
 
     public int MinPoints { get; set; }
+    
+    public int MinMaintainPoints { get; set; }
 
     public decimal PointsMultiplier { get; set; }
 
-    public int PriorityLevel { get; set; }
-
     public decimal DiscountPercent { get; set; }
 
-    public int KeepPoints { get; set; } = 0;
-
-    public int AdvanceBookingDays { get; set; } = 7;
+    public int MaxBookingDays { get; set; } = 3;
 
     public DateTime CreatedAt { get; set; }
 

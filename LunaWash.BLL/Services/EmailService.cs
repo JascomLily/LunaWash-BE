@@ -1,6 +1,7 @@
 using System;
-using System.Net;
-using System.Net.Mail;
+using System.Net.Http;
+using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using LunaWash.BLL.Interfaces;
@@ -10,53 +11,41 @@ namespace LunaWash.BLL.Services
     public class EmailService : IEmailService
     {
         private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
+        
+        // This is the Google Apps Script Web App URL to bypass Render's SMTP block
+        private readonly string _googleScriptUrl = "https://script.google.com/macros/s/AKfycbyRNYzBDpUlH3HMLcvr6r29ibJD8KvlS6SMZiX9dqZECM2cYp8FvVEb1aw_1Spbv0DX/exec";
 
         public EmailService(IConfiguration configuration)
         {
             _configuration = configuration;
+            _httpClient = new HttpClient();
         }
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var smtpServer = _configuration["EmailSettings:SmtpServer"];
-            var portString = _configuration["EmailSettings:Port"];
-            var senderEmail = _configuration["EmailSettings:SenderEmail"];
-            var password = _configuration["EmailSettings:Password"];
-            var senderName = _configuration["EmailSettings:SenderName"];
-
-            if (string.IsNullOrEmpty(smtpServer) || string.IsNullOrEmpty(senderEmail))
+            var payload = new
             {
-                Console.WriteLine("Email configuration is missing.");
-                return;
+                to = toEmail,
+                subject = subject,
+                body = body
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
+
+            try
+            {
+                // Send via HTTP POST over port 443 which is never blocked
+                var response = await _httpClient.PostAsync(_googleScriptUrl, content);
+                response.EnsureSuccessStatusCode();
+                
+                var resultString = await response.Content.ReadAsStringAsync();
+                Console.WriteLine("Google Script Email Response: " + resultString);
             }
-
-            int port = int.TryParse(portString, out int p) ? p : 587;
-
-            using (var client = new SmtpClient(smtpServer, port))
+            catch (Exception ex)
             {
-                client.UseDefaultCredentials = false;
-                client.Credentials = new NetworkCredential(senderEmail, password);
-                client.EnableSsl = true;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(senderEmail, senderName),
-                    Subject = subject,
-                    Body = body,
-                    IsBodyHtml = true
-                };
-
-                mailMessage.To.Add(toEmail);
-
-                try
-                {
-                    await client.SendMailAsync(mailMessage);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("Error sending email: " + ex.Message);
-                    throw;
-                }
+                Console.WriteLine("Error sending email via Google Script: " + ex.Message);
+                throw;
             }
         }
     }

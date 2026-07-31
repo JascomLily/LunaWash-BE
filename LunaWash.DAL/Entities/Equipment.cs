@@ -14,6 +14,9 @@ namespace LunaWash.DAL.Entities
         [StringLength(50)]
         public string BranchId { get; set; } = null!;
 
+        [StringLength(50)]
+        public string? WashSlotId { get; set; }
+
         [StringLength(150)]
         public string Name { get; set; } = null!;
 

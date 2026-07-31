@@ -36,17 +36,9 @@ namespace LunaWash.DAL.Entities
         [MaxLength(1000)]
         public string? Comment { get; set; }
 
-        [MaxLength(1000)]
-        public string? ResponseText { get; set; }
-
-        [MaxLength(50)]
-        public string? RespondedById { get; set; }
-
-        public DateTime? RespondedAt { get; set; }
-
         public DateTime CreatedAt { get; set; }
 
-        [ForeignKey(nameof(RespondedById))]
-        public virtual User? RespondedBy { get; set; }
+        [MaxLength(2000)]
+        public string? Reply { get; set; }
     }
 }

@@ -26,6 +26,20 @@ namespace LunaWash.API.Controllers
                 ?? string.Empty;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin reviews by branch
+        /// </summary>
+        [HttpGet("branch/{branchId}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetReviewsByBranch(string branchId)
+        {
+            var reviews = await _reviewService.GetReviewsByBranchAsync(branchId);
+            return Ok(reviews);
+        }
+
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới review
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateReview([FromBody] CreateReviewDto dto)
         {
@@ -43,6 +57,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin review by booking id
+        /// </summary>
         [HttpGet("booking/{bookingId}")]
         public async Task<IActionResult> GetReviewByBookingId(string bookingId)
         {
@@ -52,6 +69,9 @@ namespace LunaWash.API.Controllers
             return Ok(review);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật review
+        /// </summary>
         [HttpPut("{bookingId}")]
         public async Task<IActionResult> UpdateReview(string bookingId, [FromBody] UpdateReviewDto dto)
         {
@@ -69,6 +89,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa review
+        /// </summary>
         [HttpDelete("{bookingId}")]
         public async Task<IActionResult> DeleteReview(string bookingId)
         {
@@ -88,26 +111,19 @@ namespace LunaWash.API.Controllers
             }
         }
 
-        [HttpGet("branch/{branchId}")]
-        [AllowAnonymous]
-        public async Task<IActionResult> GetReviewsByBranch(string branchId)
-        {
-            var reviews = await _reviewService.GetReviewsByBranchAsync(branchId);
-            return Ok(reviews);
-        }
-
-        [HttpPut("{id}/respond")]
-        public async Task<IActionResult> RespondToReview(string id, [FromBody] ReviewRespondDto dto)
+        /// <summary>
+        /// API xử lý chức năng: Reply to review
+        /// </summary>
+        [HttpPost("{reviewId}/reply")]
+        [Authorize(Roles = "BranchManager,Manager,Admin")]
+        public async Task<IActionResult> ReplyToReview(string reviewId, [FromBody] ReplyReviewRequestDto dto)
         {
             try
             {
-                var userId = GetCurrentUserId();
-                if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
-                var success = await _reviewService.RespondToReviewAsync(id, userId, dto.ResponseText);
-                if (success)
-                    return Ok(new { message = "Đã phản hồi đánh giá thành công." });
-                return BadRequest(new { message = "Không tìm thấy đánh giá." });
+                var result = await _reviewService.ReplyToReviewAsync(reviewId, dto);
+                if (result)
+                    return Ok(new { message = "Đã gửi phản hồi thành công" });
+                return BadRequest(new { message = "Không thể gửi phản hồi" });
             }
             catch (Exception ex)
             {

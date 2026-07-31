@@ -10,34 +10,40 @@ namespace LunaWash.DAL.Entities
         [StringLength(50)]
         public string Id { get; set; } = null!;
 
-        [StringLength(50)]
-        public string BranchId { get; set; } = null!;
-
-        [StringLength(50)]
-        public string EquipmentId { get; set; } = null!;
-
-        [StringLength(50)]
-        public string ReporterId { get; set; } = null!;
-
+        [Required]
         [StringLength(200)]
         public string Title { get; set; } = null!;
 
-        [StringLength(500)]
-        public string? Description { get; set; }
-
         [StringLength(50)]
-        public string Status { get; set; } = "Chờ duyệt"; // Chờ duyệt, Đã duyệt, Đã từ chối
+        public string? EquipmentId { get; set; }
+
+        [Required]
+        [StringLength(50)]
+        public string BranchId { get; set; } = null!;
+
+        [Required]
+        [StringLength(50)]
+        public string ReporterId { get; set; } = null!;
+
+        [Required]
+        [StringLength(1000)]
+        public string Description { get; set; } = null!;
+
+        [Required]
+        [StringLength(50)]
+        public string Status { get; set; } = "Mới báo cáo"; // Mới báo cáo, Đang xử lý, Đã giải quyết, Từ chối
+
+        [StringLength(500)]
+        public string? ImageUrl { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public DateTime? UpdatedAt { get; set; }
-
         // Navigation properties
+        [ForeignKey("EquipmentId")]
+        public virtual Equipment? Equipment { get; set; }
+
         [ForeignKey("BranchId")]
         public virtual Branch Branch { get; set; } = null!;
-
-        [ForeignKey("EquipmentId")]
-        public virtual Equipment Equipment { get; set; } = null!;
 
         [ForeignKey("ReporterId")]
         public virtual User Reporter { get; set; } = null!;

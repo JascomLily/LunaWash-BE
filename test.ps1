@@ -1,0 +1,1 @@
+$body = @{ title = laura; branchId = BRN-Q1-01; equipmentId = EQ-001; description = 1234 } | ConvertTo-Json; Invoke-RestMethod -Uri http://localhost:5037/api/Incidents -Method Post -Headers @{Content-Type=application/json} -Body $body

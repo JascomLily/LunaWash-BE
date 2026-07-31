@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LunaWash.BLL.DTOs;
-using LunaWash.BLL.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using LunaWash.DAL.Data;
 using LunaWash.DAL.Entities;
-using Microsoft.EntityFrameworkCore;
+using LunaWash.BLL.DTOs;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.BLL.Services
 {
@@ -19,195 +19,198 @@ namespace LunaWash.BLL.Services
             _context = context;
         }
 
-        public async Task<IEnumerable<MaintenanceTaskDetailDto>> GetTasksByTechnicianAsync(string techId)
+        public async Task<MaintenanceResponse> CreateMaintenanceTaskAsync(CreateMaintenanceRequest request)
         {
-            var tasks = await _context.MaintenanceTasks
-                .Include(t => t.Equipment)
-                .Include(t => t.AssignedTo)
-                .Where(t => t.AssignedToId == techId)
-                .OrderByDescending(t => t.CreatedAt)
-                .ToListAsync();
-
-            return tasks.Select(t => new MaintenanceTaskDetailDto
+            var task = new MaintenanceTask
             {
-                Id = t.Id,
-                BranchId = t.BranchId,
-                EquipmentId = t.EquipmentId,
-                EquipmentName = t.Equipment.Name,
-                TaskName = t.TaskName,
-                Description = t.Description,
-                Status = t.Status,
-                AssignedToId = t.AssignedToId,
-                AssignedToName = t.AssignedTo?.FullName,
-                Resolution = t.Resolution,
-                SupportRequest = t.SupportRequest,
-                IsIncident = t.IsIncident,
-                Priority = t.Priority,
-                CreatedAt = t.CreatedAt,
-                UpdatedAt = t.UpdatedAt
-            });
-        }
-
-        public async Task<IEnumerable<MaintenanceTaskDetailDto>> GetTasksByBranchAsync(string branchId)
-        {
-            var tasks = await _context.MaintenanceTasks
-                .Include(t => t.Equipment)
-                .Include(t => t.AssignedTo)
-                .Where(t => t.BranchId == branchId)
-                .OrderByDescending(t => t.CreatedAt)
-                .ToListAsync();
-
-            return tasks.Select(t => new MaintenanceTaskDetailDto
-            {
-                Id = t.Id,
-                BranchId = t.BranchId,
-                EquipmentId = t.EquipmentId,
-                EquipmentName = t.Equipment.Name,
-                TaskName = t.TaskName,
-                Description = t.Description,
-                Status = t.Status,
-                AssignedToId = t.AssignedToId,
-                AssignedToName = t.AssignedTo?.FullName,
-                Resolution = t.Resolution,
-                SupportRequest = t.SupportRequest,
-                IsIncident = t.IsIncident,
-                Priority = t.Priority,
-                CreatedAt = t.CreatedAt,
-                UpdatedAt = t.UpdatedAt
-            });
-        }
-
-        public async Task<bool> UpdateTaskStatusAsync(string id, string techId, MaintenanceTaskUpdateStatusDto dto)
-        {
-            var task = await _context.MaintenanceTasks.Include(t => t.Equipment).FirstOrDefaultAsync(t => t.Id == id && t.AssignedToId == techId);
-            if (task == null) return false;
-
-            task.Status = dto.Status;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            if (dto.Status == "Hoàn thành")
-            {
-                task.Resolution = dto.Resolution;
-                task.SupportRequest = dto.SupportRequest;
-                // Khi hoàn thành sửa chữa, đưa thiết bị về "Cần kiểm tra" để Quản lý xuống nghiệm thu
-                task.Equipment.Status = "Cần kiểm tra";
-            }
-            else if (dto.Status == "Chờ kinh phí" || dto.Status == "Đang làm")
-            {
-                task.SupportRequest = dto.SupportRequest;
-                task.Equipment.Status = "Đang bảo trì";
-            }
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> ConfirmTaskCompletionAsync(string id)
-        {
-            var task = await _context.MaintenanceTasks.Include(t => t.Equipment).FirstOrDefaultAsync(t => t.Id == id);
-            if (task == null) return false;
-
-            task.Status = "Đã nghiệm thu";
-            task.UpdatedAt = DateTime.UtcNow;
-
-            // Đưa thiết bị về trạng thái Hoạt động sau khi nghiệm thu
-            task.Equipment.Status = "Hoạt động";
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> AssignTaskAsync(string id, string assignedToId, string priority)
-        {
-            var task = await _context.MaintenanceTasks.FirstOrDefaultAsync(t => t.Id == id);
-            if (task == null) return false;
-
-            var tech = await _context.Users.FirstOrDefaultAsync(u => u.Id == assignedToId && u.RoleId == "ROL-05");
-            if (tech == null) return false;
-
-            task.AssignedToId = assignedToId;
-            task.Priority = priority;
-            task.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<EquipmentCheckLogResponseDto?> CreateCheckLogAsync(string branchId, string techId, EquipmentCheckLogCreateDto dto)
-        {
-            var eq = await _context.Equipments.FirstOrDefaultAsync(e => e.Id == dto.EquipmentId && e.BranchId == branchId);
-            if (eq == null) return null;
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == techId && u.RoleId == "ROL-05");
-            if (user == null) return null;
-
-            var id = "LOG-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
-            var log = new EquipmentCheckLog
-            {
-                Id = id,
-                BranchId = branchId,
-                EquipmentId = dto.EquipmentId,
-                TechnicianId = techId,
-                CheckTime = DateTime.UtcNow,
-                Condition = dto.Condition,
-                Notes = dto.Notes,
+                Id = Guid.NewGuid().ToString(),
+                EquipmentId = request.EquipmentId,
+                BranchId = request.BranchId,
+                TaskName = request.TaskName,
+                Description = request.Description,
+                Priority = request.Priority,
+                AssigneeId = request.AssigneeId,
+                IncidentReportId = request.IncidentReportId,
+                Status = "Chưa làm",
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Tự động đồng bộ trạng thái thiết bị theo kết quả kiểm tra
-            if (dto.Condition == "Lỗi")
+            _context.MaintenanceTasks.Add(task);
+
+            if (!string.IsNullOrEmpty(request.IncidentReportId))
             {
-                eq.Status = "Lỗi";
+                var incident = await _context.IncidentReports.FindAsync(request.IncidentReportId);
+                if (incident != null)
+                {
+                    incident.Status = "Đang xử lý"; // Update incident status when assigned to a task
+                }
             }
-            else if (dto.Condition == "Cần kiểm tra")
+            if (string.IsNullOrEmpty(request.AssigneeId))
             {
-                eq.Status = "Cần kiểm tra";
-            }
-            else
-            {
-                eq.Status = "Hoạt động";
+                var techs = await _context.Users
+                    .Include(u => u.Role)
+                    .Where(u => u.BranchId == request.BranchId && (u.Role.RoleName == "TechnicalStaff" || u.Role.RoleName == "Staff"))
+                    .ToListAsync();
+                
+                foreach (var tech in techs)
+                {
+                    _context.Notifications.Add(new LunaWash.DAL.Entities.Notification
+                    {
+                        UserId = tech.Id,
+                        Title = "Công việc mới",
+                        Message = $"Có công việc bảo trì mới: {request.TaskName}",
+                        Type = "info",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
             }
 
-            _context.EquipmentCheckLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            return new EquipmentCheckLogResponseDto
-            {
-                Id = log.Id,
-                BranchId = log.BranchId,
-                EquipmentId = log.EquipmentId,
-                EquipmentName = eq.Name,
-                TechnicianId = log.TechnicianId,
-                TechnicianName = user.FullName,
-                CheckTime = log.CheckTime,
-                Condition = log.Condition,
-                Notes = log.Notes,
-                CreatedAt = log.CreatedAt
-            };
+            return await GetMaintenanceTaskByIdAsync(task.Id) ?? throw new Exception("Failed to create maintenance task");
         }
 
-        public async Task<IEnumerable<EquipmentCheckLogResponseDto>> GetCheckLogsByBranchAsync(string branchId)
+        public async Task<IEnumerable<MaintenanceResponse>> GetMaintenanceTasksByBranchAsync(string branchId)
         {
-            var logs = await _context.EquipmentCheckLogs
-                .Include(l => l.Equipment)
-                .Include(l => l.Technician)
-                .Where(l => l.BranchId == branchId)
-                .OrderByDescending(l => l.CheckTime)
+            return await _context.MaintenanceTasks
+                .Include(m => m.Equipment)
+                .Include(m => m.Branch)
+                .Include(m => m.Assignee)
+                .Where(m => m.BranchId == branchId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => MapToResponse(m))
                 .ToListAsync();
+        }
 
-            return logs.Select(l => new EquipmentCheckLogResponseDto
+        public async Task<IEnumerable<MaintenanceResponse>> GetMaintenanceTasksByAssigneeAsync(string assigneeId)
+        {
+            return await _context.MaintenanceTasks
+                .Include(m => m.Equipment)
+                .Include(m => m.Branch)
+                .Include(m => m.Assignee)
+                .Where(m => m.AssigneeId == assigneeId)
+                .OrderByDescending(m => m.CreatedAt)
+                .Select(m => MapToResponse(m))
+                .ToListAsync();
+        }
+
+        public async Task<MaintenanceResponse?> GetMaintenanceTaskByIdAsync(string taskId)
+        {
+            var task = await _context.MaintenanceTasks
+                .Include(m => m.Equipment)
+                .Include(m => m.Branch)
+                .Include(m => m.Assignee)
+                .FirstOrDefaultAsync(m => m.Id == taskId);
+
+            return task != null ? MapToResponse(task) : null;
+        }
+
+        public async Task<bool> UpdateMaintenanceTaskStatusAsync(string taskId, UpdateMaintenanceStatusRequest request)
+        {
+            var task = await _context.MaintenanceTasks
+                .Include(m => m.IncidentReport)
+                .FirstOrDefaultAsync(m => m.Id == taskId);
+                
+            if (task == null) return false;
+
+            task.Status = request.Status;
+            
+            if (request.ReviewNote != null)
             {
-                Id = l.Id,
-                BranchId = l.BranchId,
-                EquipmentId = l.EquipmentId,
-                EquipmentName = l.Equipment.Name,
-                TechnicianId = l.TechnicianId,
-                TechnicianName = l.Technician.FullName,
-                CheckTime = l.CheckTime,
-                Condition = l.Condition,
-                Notes = l.Notes,
-                CreatedAt = l.CreatedAt
-            });
+                task.ReviewNote = request.ReviewNote;
+            }
+
+            if (request.Status == "Chờ nghiệm thu")
+            {
+                var manager = await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u => u.BranchId == task.BranchId && u.Role.RoleName == "BranchManager");
+                
+                if (manager != null)
+                {
+                    _context.Notifications.Add(new LunaWash.DAL.Entities.Notification
+                    {
+                        UserId = manager.Id,
+                        Title = "Nghiệm thu sự cố",
+                        Message = $"Sự cố '{task.TaskName}' đang chờ bạn nghiệm thu.",
+                        Type = "incident",
+                        IsRead = false,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            if (request.Status == "Hoàn thành")
+            {
+                if (task.IncidentReportId != null && task.IncidentReport != null)
+                {
+                    task.IncidentReport.Status = "Đã giải quyết";
+                }
+                
+                // Update equipment status back to Tốt and set LastMaintenance
+                if (!string.IsNullOrEmpty(task.EquipmentId))
+                {
+                    var eq = await _context.Equipments.FindAsync(task.EquipmentId);
+                    if (eq != null)
+                    {
+                        eq.Status = "Tốt";
+                        eq.LastMaintenance = DateTime.UtcNow.ToString("o");
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AssignMaintenanceTaskAsync(string taskId, string assigneeId)
+        {
+            var task = await _context.MaintenanceTasks.FindAsync(taskId);
+            if (task == null) return false;
+
+            if (!string.IsNullOrEmpty(task.AssigneeId))
+            {
+                // Đã có người nhận
+                return false;
+            }
+
+            task.AssigneeId = assigneeId;
+            task.Status = "Đang làm";
+            
+            // Cập nhật trạng thái thiết bị thành "Đang bảo trì"
+            if (!string.IsNullOrEmpty(task.EquipmentId))
+            {
+                var eq = await _context.Equipments.FindAsync(task.EquipmentId);
+                if (eq != null)
+                {
+                    eq.Status = "Đang bảo trì";
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        private static MaintenanceResponse MapToResponse(MaintenanceTask m)
+        {
+            return new MaintenanceResponse
+            {
+                Id = m.Id,
+                EquipmentId = m.EquipmentId,
+                EquipmentName = m.Equipment?.Name ?? "N/A",
+                BranchId = m.BranchId,
+                BranchName = m.Branch.BranchName,
+                TaskName = m.TaskName,
+                Description = m.Description,
+                Status = m.Status,
+                Priority = m.Priority,
+                ReviewNote = m.ReviewNote,
+                AssigneeId = m.AssigneeId,
+                AssigneeName = m.Assignee?.FullName,
+                IncidentReportId = m.IncidentReportId,
+                CreatedAt = m.CreatedAt
+            };
         }
     }
 }

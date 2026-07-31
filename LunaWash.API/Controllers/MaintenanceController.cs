@@ -1,14 +1,15 @@
-using System;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using LunaWash.BLL.DTOs;
 using LunaWash.BLL.Interfaces;
-using Microsoft.AspNetCore.Mvc;
 
 namespace LunaWash.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
     public class MaintenanceController : ControllerBase
     {
         private readonly IMaintenanceService _maintenanceService;
@@ -18,147 +19,80 @@ namespace LunaWash.API.Controllers
             _maintenanceService = maintenanceService;
         }
 
-        [HttpGet("tasks/technician/{techId}")]
-        public async Task<IActionResult> GetTechTasks(string techId)
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới maintenance task
+        /// </summary>
+        [HttpPost]
+        [Authorize(Roles = "Admin,BranchManager")]
+        public async Task<IActionResult> CreateMaintenanceTask([FromBody] CreateMaintenanceRequest request)
         {
-            try
-            {
-                var tasks = await _maintenanceService.GetTasksByTechnicianAsync(techId);
-                return Ok(tasks);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+            var result = await _maintenanceService.CreateMaintenanceTaskAsync(request);
+            return Ok(result);
         }
 
-        [HttpGet("tasks/branch/{branchId}")]
-        public async Task<IActionResult> GetBranchTasks(string branchId)
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance tasks by branch
+        /// </summary>
+        [HttpGet("branch/{branchId}")]
+        [Authorize(Roles = "Admin,BranchManager,TechnicalStaff")]
+        public async Task<IActionResult> GetMaintenanceTasksByBranch(string branchId)
         {
-            try
-            {
-                var tasks = await _maintenanceService.GetTasksByBranchAsync(branchId);
-                return Ok(tasks);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+            var result = await _maintenanceService.GetMaintenanceTasksByBranchAsync(branchId);
+            return Ok(result);
         }
 
-        [HttpPut("tasks/{id}/status")]
-        public async Task<IActionResult> UpdateTaskStatus(string id, [FromBody] MaintenanceTaskUpdateStatusDto dto)
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance tasks by assignee
+        /// </summary>
+        [HttpGet("assignee")]
+        public async Task<IActionResult> GetMaintenanceTasksByAssignee()
         {
-            try
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
             {
-                var techId = GetCurrentUserId();
-                if (string.IsNullOrEmpty(techId))
-                {
-                    return Unauthorized(new { message = "Không xác định được danh tính kỹ thuật viên." });
-                }
-
-                var success = await _maintenanceService.UpdateTaskStatusAsync(id, techId, dto);
-                if (!success)
-                {
-                    return BadRequest(new { message = "Không thể cập nhật trạng thái nhiệm vụ." });
-                }
-
-                return Ok(new { message = "Cập nhật trạng thái nhiệm vụ thành công." });
+                return Unauthorized();
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+
+            var result = await _maintenanceService.GetMaintenanceTasksByAssigneeAsync(userId);
+            return Ok(result);
         }
 
-        [HttpPut("tasks/{id}/confirm")]
-        public async Task<IActionResult> ConfirmTaskCompletion(string id)
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin maintenance task by id
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetMaintenanceTaskById(string id)
         {
-            try
-            {
-                var success = await _maintenanceService.ConfirmTaskCompletionAsync(id);
-                if (!success)
-                {
-                    return BadRequest(new { message = "Nghiệm thu công việc thất bại." });
-                }
-
-                return Ok(new { message = "Nghiệm thu và xác nhận hoàn thành công việc sửa chữa thành công." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+            var result = await _maintenanceService.GetMaintenanceTaskByIdAsync(id);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
-        [HttpPut("tasks/{id}/assign")]
-        public async Task<IActionResult> AssignTask(string id, [FromBody] MaintenanceTaskAssignDto dto)
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật maintenance task status
+        /// </summary>
+        [HttpPut("{id}/status")]
+        public async Task<IActionResult> UpdateMaintenanceTaskStatus(string id, [FromBody] UpdateMaintenanceStatusRequest request)
         {
-            try
-            {
-                var success = await _maintenanceService.AssignTaskAsync(id, dto.AssignedToId, dto.Priority);
-                if (!success)
-                {
-                    return BadRequest(new { message = "Giao việc sửa chữa thất bại." });
-                }
-
-                return Ok(new { message = "Giao việc sửa chữa thành công." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
+            var success = await _maintenanceService.UpdateMaintenanceTaskStatusAsync(id, request);
+            if (!success) return NotFound();
+            return Ok(new { message = "Status updated successfully" });
         }
 
-        [HttpPost("check-log")]
-        public async Task<IActionResult> CreateCheckLog([FromQuery] string branchId, [FromBody] EquipmentCheckLogCreateDto dto)
+        /// <summary>
+        /// API xử lý chức năng: Assign maintenance task
+        /// </summary>
+        [HttpPut("{id}/assign")]
+        [Authorize(Roles = "TechnicalStaff")]
+        public async Task<IActionResult> AssignMaintenanceTask(string id)
         {
-            try
-            {
-                var techId = GetCurrentUserId();
-                if (string.IsNullOrEmpty(techId))
-                {
-                    return Unauthorized(new { message = "Không xác định được danh tính kỹ thuật viên." });
-                }
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-                var result = await _maintenanceService.CreateCheckLogAsync(branchId, techId, dto);
-                if (result == null)
-                {
-                    return BadRequest(new { message = "Không thể gửi nhật ký ca trực định kỳ." });
-                }
+            var result = await _maintenanceService.AssignMaintenanceTaskAsync(id, userId);
+            if (!result) return BadRequest(new { message = "Task cannot be assigned or is already claimed." });
 
-                return Ok(result);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
-        }
-
-        [HttpGet("check-log/branch/{branchId}")]
-        public async Task<IActionResult> GetCheckLogs(string branchId)
-        {
-            try
-            {
-                var logs = await _maintenanceService.GetCheckLogsByBranchAsync(branchId);
-                return Ok(logs);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Lỗi hệ thống: " + ex.Message });
-            }
-        }
-
-        private string GetCurrentUserId()
-        {
-            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-                         ?? User?.FindFirst("sub")?.Value;
-
-            if (string.IsNullOrEmpty(userId) && Request.Headers.TryGetValue("X-User-Id", out var headerVal))
-            {
-                userId = headerVal.ToString();
-            }
-
-            return userId ?? string.Empty;
+            return NoContent();
         }
     }
 }

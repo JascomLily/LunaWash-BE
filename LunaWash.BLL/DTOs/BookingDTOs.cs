@@ -20,6 +20,7 @@ namespace LunaWash.BLL.DTOs
         public string? PackageId { get; set; }
         public List<string> ServicePriceIds { get; set; } = new List<string>();
         public string? PromoCode { get; set; }
+        public int? TotalPrice { get; set; }
     }
 
     public class OccupiedSlotDTO
@@ -41,9 +42,13 @@ namespace LunaWash.BLL.DTOs
         public string TotalPrice { get; set; } = null!;
         public string Status { get; set; } = null!;
         public string PaymentMethod { get; set; } = null!;
+        public string CustomerName { get; set; } = null!;
         public DateTime BookingDate { get; set; }
         public DateTime? CheckoutTime { get; set; }
         public double? Rating { get; set; }
+        public bool IsStartRequested { get; set; }
+        public bool CustomerConfirmedReady { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
     public class UpdateBookingStatusDTO
     {

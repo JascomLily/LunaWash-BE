@@ -1,16 +1,22 @@
 using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
-namespace LunaWash.DAL.Entities
+namespace LunaWash.DAL.Entities;
+
+public class Banner
 {
-    public class Banner
-    {
-        public string Id { get; set; } = null!;
-        public string ImageUrl { get; set; } = null!;
-        public string? Title { get; set; }
-        public string? RedirectUrl { get; set; } // Can hold promoCode or a URL
-        public int Position { get; set; }
-        public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-    }
+    [Key]
+    public int Id { get; set; }
+
+    public string ImageUrl { get; set; } = string.Empty;
+
+    public string? VoucherId { get; set; }
+
+    [ForeignKey("VoucherId")]
+    public virtual Voucher? Voucher { get; set; }
+
+    public string PlatformType { get; set; } = "Web"; // "Web" or "App"
+    
+    public bool IsHidden { get; set; } = false;
 }

@@ -16,11 +16,13 @@ namespace LunaWash.BLL.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
 
-        public BookingService(ApplicationDbContext context, IEmailService emailService)
+        public BookingService(ApplicationDbContext context, IEmailService emailService, INotificationService notificationService)
         {
             _context = context;
             _emailService = emailService;
+            _notificationService = notificationService;
         }
 
         public async Task<BookingResponseDTO?> CreateBookingAsync(string userId, CreateBookingRequestDTO dto)
@@ -34,6 +36,22 @@ namespace LunaWash.BLL.Services
             int durationMinutes = dto.Duration > 0 ? dto.Duration : 30; // Lấy từ nhánh main
             var endTime = startTime.AddMinutes(durationMinutes);
             var bookingDate = startTime.Date;
+
+            // Kiểm tra giới hạn số ngày đặt trước theo hạng thành viên
+            var customerProfile = await _context.CustomerProfiles
+                .Include(cp => cp.MembershipTier)
+                .FirstOrDefaultAsync(cp => cp.UserId == userId);
+            
+            int maxDays = customerProfile?.MembershipTier?.MaxBookingDays ?? 3; // Mặc định 3 ngày
+            var currentLocalTime = DateTime.UtcNow.AddHours(7).Date;
+            if (bookingDate > currentLocalTime.AddDays(maxDays))
+            {
+                throw new InvalidOperationException($"Hạng thành viên của bạn chỉ được phép đặt lịch trước tối đa {maxDays} ngày.");
+            }
+            if (bookingDate < currentLocalTime)
+            {
+                throw new InvalidOperationException("Không thể đặt lịch cho ngày trong quá khứ.");
+            }
   
             using var transaction = await _context.Database.BeginTransactionAsync(IsolationLevel.Serializable);
             try
@@ -49,7 +67,7 @@ namespace LunaWash.BLL.Services
 
                 var busySlotIds = await _context.Bookings
                     .Where(b => b.BranchId == dto.BranchId
-                             && b.Status != "Cancelled" 
+                             && b.Status != "Cancelled"
                              && !b.IsDeleted
                              && b.ScheduledStartTime < endTime 
                              && b.ScheduledEndTime > startTime)
@@ -135,9 +153,13 @@ namespace LunaWash.BLL.Services
                             if (extraServicePrices.Any())
                             {
                                 basePrice += (int)extraServicePrices.Sum(sp => sp.Price);
-                                var extraServiceNames = extraServicePrices.Select(sp => sp.Service?.ServiceName ?? "Dịch vụ phụ");
-                                extrasString = string.Join(", ", extraServiceNames);
-                                services += " + " + extrasString;
+                                var extraServicesList = extraServicePrices.Select(sp => new {
+                                    n = sp.Service?.ServiceName ?? "Dịch vụ phụ",
+                                    p = sp.Price,
+                                    d = sp.DurationMinutes,
+                                    pt = sp.PointsRewarded
+                                }).ToList();
+                                extrasString = JsonSerializer.Serialize(extraServicesList);
                             }
                         }
                     }
@@ -175,28 +197,40 @@ namespace LunaWash.BLL.Services
                         }
 
                         // Xử lý các dịch vụ phụ (AddOn)
-                        var extraServiceNames = servicePrices
+                        var extraServicesList = servicePrices
                             .Where(sp => sp.Service != null && sp.Service.ServiceType == "AddOn")
-                            .Select(sp => sp.Service!.ServiceName)
+                            .Select(sp => new {
+                                n = sp.Service!.ServiceName,
+                                p = sp.Price,
+                                d = sp.DurationMinutes,
+                                pt = sp.PointsRewarded
+                            })
                             .ToList();
                         
-                        extrasString = string.Join(", ", extraServiceNames);
+                        extrasString = JsonSerializer.Serialize(extraServicesList);
                     }
                 }
 
                 string parsedPaymentMethod = "tien-mat";
-                if (dto.Notes != null)
+                if (!string.IsNullOrEmpty(dto.Notes))
                 {
-                    try
+                    if (dto.Notes.Trim().Equals("VNPay", StringComparison.OrdinalIgnoreCase))
                     {
-                        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                        var doc = JsonDocument.Parse(dto.Notes);
-                        if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
-                        {
-                            parsedPaymentMethod = pm.GetString() ?? "tien-mat";
-                        }
+                        parsedPaymentMethod = "vnpay";
                     }
-                    catch { }
+                    else
+                    {
+                        try
+                        {
+                            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                            var doc = JsonDocument.Parse(dto.Notes);
+                            if (doc.RootElement.TryGetProperty("paymentMethod", out var pm))
+                            {
+                                parsedPaymentMethod = pm.GetString() ?? "tien-mat";
+                            }
+                        }
+                        catch { }
+                    }
                 }
 
                 string paymentMethod = parsedPaymentMethod;
@@ -218,18 +252,34 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                int totalPrice = basePrice;
+                int totalPrice = dto.TotalPrice ?? basePrice;
 
+                CustomerVoucher? appliedVoucher = null;
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
                 {
-                    var promotion = await _context.Promotions.FirstOrDefaultAsync(p => p.Code.ToUpper() == dto.PromoCode.ToUpper() && p.IsActive && !p.IsDeleted);
-                    if (promotion != null && DateTime.UtcNow >= promotion.StartDate && DateTime.UtcNow <= promotion.EndDate)
+                    // Cho phép truyền vào PromoCode là CustomerVoucher.Id hoặc Voucher.Id (VD: LUNANEW)
+                    appliedVoucher = await _context.CustomerVouchers
+                        .Include(cv => cv.Voucher)
+                        .FirstOrDefaultAsync(cv => (cv.Id == dto.PromoCode || cv.VoucherId == dto.PromoCode) && cv.CustomerId == userId && !cv.IsUsed && !cv.IsDeleted);
+
+                    if (appliedVoucher != null && appliedVoucher.Voucher != null)
                     {
-                        if (!promotion.MaxUsage.HasValue || promotion.CurrentUsage < promotion.MaxUsage.Value)
+                        // Nếu FE không gửi TotalPrice, thì BE tự tính
+                        if (!dto.TotalPrice.HasValue)
                         {
-                            totalPrice -= (int)(totalPrice * (promotion.DiscountPercent / 100.0));
-                            promotion.CurrentUsage++;
+                            if (appliedVoucher.Voucher.DiscountValue <= 100)
+                            {
+                                totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
+                            }
+                            else
+                            {
+                                totalPrice -= (int)appliedVoucher.Voucher.DiscountValue;
+                            }
+                            if (totalPrice < 0) totalPrice = 0;
                         }
+
+                        appliedVoucher.IsUsed = true;
+                        appliedVoucher.UsedAt = DateTime.UtcNow;
                     }
                 }
 
@@ -269,7 +319,7 @@ namespace LunaWash.BLL.Services
                     VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                     ScheduledStartTime = startTime,
                     ScheduledEndTime = endTime,
-                    Status = paymentMethod == "vnpay" ? "Pending" : "Confirmed",
+                    Status = "Pending",
                     WashSlotId = dbSlotId,
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
@@ -280,6 +330,12 @@ namespace LunaWash.BLL.Services
 
                 _context.Bookings.Add(booking);
                 await _context.SaveChangesAsync();
+                
+                if (appliedVoucher != null)
+                {
+                    appliedVoucher.UsedAtBookingId = booking.Id;
+                    await _context.SaveChangesAsync();
+                }
                 
                 await transaction.CommitAsync();
 
@@ -326,6 +382,13 @@ namespace LunaWash.BLL.Services
                     // Gọi bất đồng bộ không chờ để phản hồi API nhanh hơn
                     _ = _emailService.SendEmailAsync(user.Email, $"Xác Nhận Đặt Lịch #{booking.Id} - LunaWash", emailBody);
                 }
+
+                await _notificationService.CreateNotificationAsync(
+                    userId,
+                    "Đặt lịch thành công",
+                    $"Bạn đã đặt lịch thành công lúc {startTime:HH:mm} tại chi nhánh {booking.Branch?.BranchName ?? "LunaWash"}.",
+                    "Booking"
+                );
 
                 return BuildBookingResponse(booking, -1);
             }
@@ -389,9 +452,26 @@ namespace LunaWash.BLL.Services
 
         public async Task<IEnumerable<BookingResponseDTO>> GetUserBookingsAsync(string userId)
         {
+            var bookingsToUpdate = await _context.Bookings
+                .Where(b => b.CustomerId == userId && (b.Status == "Confirmed" || b.Status == "Pending") && !b.IsDeleted)
+                .ToListAsync();
+            
+            var currentTimeVn = DateTime.UtcNow.AddHours(7);
+            bool isModified = false;
+            foreach (var b in bookingsToUpdate)
+            {
+                if (currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                {
+                    b.Status = "Hủy vì quá hạn chờ";
+                    b.UpdatedAt = DateTime.UtcNow;
+                    isModified = true;
+                }
+            }
+            if (isModified) await _context.SaveChangesAsync();
+
             var bookings = await _context.Bookings
                 .Include(b => b.Branch)
-                .Where(b => b.CustomerId == userId && b.Status != "Pending")
+                .Where(b => b.CustomerId == userId)
                 .OrderByDescending(b => b.ScheduledStartTime)
                 .ToListAsync();
 
@@ -473,6 +553,13 @@ namespace LunaWash.BLL.Services
                 _ = _emailService.SendEmailAsync(user.Email, $"Thông báo Hủy Lịch #{booking.Id} - LunaWash", emailBody);
             }
 
+            await _notificationService.CreateNotificationAsync(
+                userId,
+                "Lịch hẹn đã bị hủy",
+                $"Lịch hẹn lúc {booking.ScheduledStartTime:HH:mm} của bạn đã bị hủy.",
+                "Booking"
+            );
+
             return true;
         }
 
@@ -498,6 +585,89 @@ namespace LunaWash.BLL.Services
             return true;
         }
 
+        public async Task<IEnumerable<BookingResponseDTO>> GetBranchHistoryAsync(string branchId)
+        {
+            var bookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId 
+                         && !b.IsDeleted
+                         && (b.Status == "Completed" || b.Status == "Cancelled" || b.Status == "Hủy vì quá hạn chờ"))
+                .OrderByDescending(b => b.ScheduledStartTime)
+                .ToListAsync();
+
+            var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
+            var customers = await _context.Users
+                .Where(u => customerIds.Contains(u.Id))
+                .ToDictionaryAsync(u => u.Id, u => u.FullName);
+
+            var vehiclesList = await _context.CustomerVehicles
+                .Where(v => customerIds.Contains(v.CustomerId))
+                .ToListAsync();
+            var vehicles = vehiclesList
+                .GroupBy(v => v.CustomerId)
+                .ToDictionary(g => g.Key, g => $"{g.First().VehicleModel} • {g.First().LicensePlate}");
+
+            var result = new List<BookingResponseDTO>();
+            foreach (var b in bookings)
+            {
+                string customerName = customers.ContainsKey(b.CustomerId) ? customers[b.CustomerId] : "Khách hàng";
+                string vehicleInfo = vehicles.ContainsKey(b.CustomerId) ? vehicles[b.CustomerId] : "Xe khách hàng";
+
+                string packageName = "Gói Cơ Bản";
+                string services = "";
+                string extras = "";
+                string paymentMethod = "tien-mat";
+
+                if (!string.IsNullOrEmpty(b.Notes))
+                {
+                    try
+                    {
+                        using (var doc = JsonDocument.Parse(b.Notes))
+                        {
+                            if (doc.RootElement.TryGetProperty("packageName", out var pkg)) packageName = pkg.GetString() ?? packageName;
+                            if (doc.RootElement.TryGetProperty("services", out var srv)) services = srv.GetString() ?? "";
+                            if (doc.RootElement.TryGetProperty("extras", out var ext))
+                            {
+                                if (ext.ValueKind == JsonValueKind.String)
+                                {
+                                    extras = ext.GetString() ?? "";
+                                }
+                                else if (ext.ValueKind == JsonValueKind.Array)
+                                {
+                                    extras = ext.GetRawText();
+                                }
+                            }
+                            if (doc.RootElement.TryGetProperty("paymentMethod", out var pm)) paymentMethod = pm.GetString() ?? paymentMethod;
+                            if (doc.RootElement.TryGetProperty("vehicleInfo", out var vInfo)) vehicleInfo = vInfo.GetString() ?? vehicleInfo;
+                        }
+                    }
+                    catch { }
+                }
+
+                result.Add(new BookingResponseDTO
+                {
+                    Id = b.Id,
+                    PackageName = packageName,
+                    Services = services,
+                    VehicleInfo = vehicleInfo,
+                    Extras = extras,
+                    BranchInfo = b.BranchId,
+                    SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
+                    TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)}",
+                    TotalPrice = b.TotalPrice.ToString("N0") + "đ",
+                    Status = b.Status == "Cancelled" ? "Đã hủy" : (b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" : "Hoàn thành"),
+                    PaymentMethod = paymentMethod,
+                    CustomerName = customerName,
+                    BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
+                    CheckoutTime = b.CheckoutTime,
+                    IsStartRequested = b.IsStartRequested,
+                    CustomerConfirmedReady = b.CustomerConfirmedReady,
+                    UpdatedAt = b.UpdatedAt
+                });
+            }
+
+            return result;
+        }
+
         public async Task<IEnumerable<BookingResponseDTO>> GetTodayBookingsForStaffAsync(string branchId, string? dateString = null)
         {
             DateOnly targetDate;
@@ -513,10 +683,22 @@ namespace LunaWash.BLL.Services
             var bookings = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == targetDate 
-                         && !b.IsDeleted
-                         && b.Status != "Pending")
+                         && !b.IsDeleted)
                 .OrderBy(b => b.ScheduledStartTime)
                 .ToListAsync();
+
+            var currentTimeVn = DateTime.UtcNow.AddHours(7);
+            bool isModified = false;
+            foreach (var b in bookings)
+            {
+                if ((b.Status == "Confirmed" || b.Status == "Pending") && currentTimeVn > b.ScheduledStartTime.AddMinutes(10))
+                {
+                    b.Status = "Hủy vì quá hạn chờ";
+                    b.UpdatedAt = DateTime.UtcNow;
+                    isModified = true;
+                }
+            }
+            if (isModified) await _context.SaveChangesAsync();
 
             var customerIds = bookings.Select(b => b.CustomerId).Distinct().ToList();
             var vehicles = await _context.CustomerVehicles
@@ -546,6 +728,12 @@ namespace LunaWash.BLL.Services
             if ((newStatus == "Checked-In" || newStatus == "Washing") && booking.CheckInTime == null)
             {
                 booking.CheckInTime = DateTime.UtcNow.AddHours(7);
+                await _notificationService.CreateNotificationAsync(
+                    booking.CustomerId,
+                    "Xe đang được rửa",
+                    "Xe của bạn đã được đưa vào khoang rửa. Quá trình đang diễn ra.",
+                    "Service"
+                );
             }
 
             // ==========================================
@@ -637,6 +825,13 @@ namespace LunaWash.BLL.Services
                     {
                         // Nâng hạng cho khách!
                         customerProfile.MembershipTierId = eligibleTier.Id;
+                        
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Chúc mừng thăng hạng",
+                            "Chúc mừng! Bạn đã tích lũy đủ điểm và thăng hạng thành viên. Cảm ơn bạn đã đồng hành cùng LunaWash!",
+                            "System"
+                        );
                     }
                 }
 
@@ -674,6 +869,13 @@ namespace LunaWash.BLL.Services
 
                     _ = _emailService.SendEmailAsync(user.Email, $"Cảm ơn bạn đã sử dụng dịch vụ #{booking.Id} - LunaWash", emailBody);
                 }
+
+                await _notificationService.CreateNotificationAsync(
+                    booking.CustomerId,
+                    "Xe đã rửa xong",
+                    "Xe của bạn đã rửa xong và đang chờ ở bãi đỗ. Vui lòng đến quầy nhận chìa khóa.",
+                    "Service"
+                );
             }
             
             await _context.SaveChangesAsync();
@@ -720,13 +922,17 @@ namespace LunaWash.BLL.Services
                 TimeRange = $"{timeRange}\n{b.ScheduledStartTime:dd/MM/yyyy}",
                 TotalPrice = totalPrice,
                 Status = b.Status == "Cancelled" ? "Đã hủy" : 
+                         b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" :
                          b.Status == "Completed" ? "Hoàn thành" : 
                          (b.Status == "Washing" || b.Status == "Checked-In") ? "Đang rửa" : 
                          "Sắp đến",
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
                 CheckoutTime = b.CheckoutTime,
-                Rating = rating != -1 ? rating : null
+                Rating = rating != -1 ? rating : null,
+                IsStartRequested = b.IsStartRequested,
+                CustomerConfirmedReady = b.CustomerConfirmedReady,
+                UpdatedAt = b.UpdatedAt
             };
         }
 
@@ -750,7 +956,7 @@ namespace LunaWash.BLL.Services
             var bookingsOnDate = await _context.Bookings
                 .Where(b => b.BranchId == branchId 
                          && b.BookingDate == date 
-                         && b.Status != "Cancelled" 
+                         && b.Status != "Cancelled"
                          && !b.IsDeleted)
                 .ToListAsync();
 
@@ -916,6 +1122,40 @@ namespace LunaWash.BLL.Services
             await _context.SaveChangesAsync();
 
             return (true, "Đã thêm dịch vụ vệ sinh nội thất thành công.");
+        }
+
+        public async Task<bool> RequestCustomerConfirmationAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return false;
+
+            booking.IsStartRequested = true;
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ConfirmReadyAsync(string bookingId)
+        {
+            var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId && !b.IsDeleted);
+            if (booking == null) return false;
+
+            booking.CustomerConfirmedReady = true;
+            booking.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<(bool IsStartRequested, bool CustomerConfirmedReady)> GetBookingConfirmationStatusAsync(string bookingId)
+        {
+            var booking = await _context.Bookings
+                .AsNoTracking()
+                .Where(b => b.Id == bookingId && !b.IsDeleted)
+                .Select(b => new { b.IsStartRequested, b.CustomerConfirmedReady })
+                .FirstOrDefaultAsync();
+
+            if (booking == null) return (false, false);
+            return (booking.IsStartRequested, booking.CustomerConfirmedReady);
         }
     }
 }

@@ -8,6 +8,7 @@ using LunaWash.DAL.Data;
 using LunaWash.BLL.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.API.Controllers
 {
@@ -17,15 +18,26 @@ namespace LunaWash.API.Controllers
     {
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _context;
+        private readonly LunaWash.BLL.Interfaces.INotificationService _notificationService;
+        private readonly ISettingsService _settingsService;
 
-        public PaymentsController(IConfiguration configuration, ApplicationDbContext context)
+        public PaymentsController(IConfiguration configuration, ApplicationDbContext context, LunaWash.BLL.Interfaces.INotificationService notificationService, ISettingsService settingsService)
         {
             _configuration = configuration;
             _context = context;
+            _notificationService = notificationService;
+            _settingsService = settingsService;
         }
 
         [Authorize]
+       
+
+        /// Create a VNPAY payment link for a specific booking
+        
         [HttpPost("create-vnpay-url/{bookingId}")]
+        // BE: ĐÂY LÀ NƠI NHẬN API CHO CHỨC NĂNG: Khởi tạo thanh toán VNPay
+        // -> Được gọi từ: FE - src/pages/Booking.jsx (Ngay sau khi Đặt lịch thành công)
+
         public async Task<IActionResult> CreateVnPayUrl(string bookingId)
         {
             // 1. Tìm đơn hàng
@@ -49,11 +61,37 @@ namespace LunaWash.API.Controllers
 
             if (totalPrice <= 0) return BadRequest("Lỗi: Số tiền thanh toán không hợp lệ.");
 
+            var settings = await _settingsService.GetPaymentSettingsAsync();
+            var tmnCode = !string.IsNullOrEmpty(settings?.VnpayTmnCode) ? settings.VnpayTmnCode : _configuration["VnPay:TmnCode"];
+            var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
+
+            string? returnUrl = _configuration["VnPay:ReturnUrl"];
+            if (string.IsNullOrEmpty(returnUrl) || (returnUrl.Contains("localhost") && !HttpContext.Request.Host.Host.Contains("localhost")))
+            {
+                var request = HttpContext.Request;
+                returnUrl = $"{request.Scheme}://{request.Host}/api/Payments/vnpay-return";
+            }
+
+            string origin = HttpContext.Request.Headers["Origin"].ToString();
+            if (string.IsNullOrEmpty(origin))
+            {
+                origin = HttpContext.Request.Headers["Referer"].ToString();
+                if (!string.IsNullOrEmpty(origin) && origin.EndsWith("/"))
+                {
+                    origin = origin.Substring(0, origin.Length - 1);
+                }
+            }
+
+            if (!string.IsNullOrEmpty(origin))
+            {
+                returnUrl += $"?feUrl={Uri.EscapeDataString(origin)}";
+            }
+
             // 3. Config VNPAY
             var vnpay = new VnPayLibrary();
             vnpay.AddRequestData("vnp_Version", "2.1.0");
             vnpay.AddRequestData("vnp_Command", "pay");
-            vnpay.AddRequestData("vnp_TmnCode", _configuration["VnPay:TmnCode"]!);
+            vnpay.AddRequestData("vnp_TmnCode", tmnCode!);
             vnpay.AddRequestData("vnp_Amount", (totalPrice * 100).ToString()); // VNPAY yêu cầu nhân 100
             vnpay.AddRequestData("vnp_CreateDate", DateTime.UtcNow.AddHours(7).ToString("yyyyMMddHHmmss"));
             vnpay.AddRequestData("vnp_CurrCode", "VND");
@@ -61,16 +99,19 @@ namespace LunaWash.API.Controllers
             vnpay.AddRequestData("vnp_Locale", "vn");
             vnpay.AddRequestData("vnp_OrderInfo", $"Thanh toan don hang {bookingId}");
             vnpay.AddRequestData("vnp_OrderType", "other"); // Loại hàng hóa
-            vnpay.AddRequestData("vnp_ReturnUrl", _configuration["VnPay:ReturnUrl"]!);
+            vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
             vnpay.AddRequestData("vnp_TxnRef", bookingId); // Mã tham chiếu (mã đơn hàng)
 
-            var paymentUrl = vnpay.CreateRequestUrl(_configuration["VnPay:BaseUrl"]!, _configuration["VnPay:HashSecret"]!);
+            var paymentUrl = vnpay.CreateRequestUrl(_configuration["VnPay:BaseUrl"]!, hashSecret!);
 
             return Ok(new { url = paymentUrl });
         }
 
         // VNPAY SẼ REDIRECT VỀ ĐÂY SAU KHI KHÁCH THANH TOÁN
         [AllowAnonymous]
+        /// <summary>
+        /// Handle the return request from VNPAY after user pays
+        /// </summary>
         [HttpGet("vnpay-return")]
         public async Task<IActionResult> VnPayReturn()
         {
@@ -89,8 +130,12 @@ namespace LunaWash.API.Controllers
             string vnp_ResponseCode = vnpay.GetResponseData("vnp_ResponseCode");
             string vnp_SecureHash = Request.Query["vnp_SecureHash"].ToString();
 
-            bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, _configuration["VnPay:HashSecret"]!);
-            var frontendUrl = _configuration["VnPay:FrontendUrl"] ?? "http://localhost:5173";
+            string? feUrl = Request.Query["feUrl"];
+            var settings = await _settingsService.GetPaymentSettingsAsync();
+            var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
+
+            bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, hashSecret!);
+            var frontendUrl = feUrl ?? _configuration["VnPay:FrontendUrl"] ?? _configuration["FRONTEND_URL"] ?? "http://localhost:5173";
 
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
             decimal bookingAmount = booking?.TotalPrice ?? 0;
@@ -118,16 +163,34 @@ namespace LunaWash.API.Controllers
                             catch { }
                         }
                         await _context.SaveChangesAsync();
+
+                        // Gửi thông báo thanh toán thành công
+                        await _notificationService.CreateNotificationAsync(
+                            booking.CustomerId,
+                            "Thanh toán thành công",
+                            $"Thanh toán thành công {bookingAmount:N0}đ qua VNPay cho đơn hàng {booking.Id}.",
+                            "Payment"
+                        );
                     }
                     
                     return Redirect($"{frontendUrl}/payment?status=success&bookingId={bookingId}&amount={bookingAmount}");
                 }
                 else
                 {
+                    if (booking != null && booking.Status == "Pending")
+                    {
+                        booking.Status = "Cancelled";
+                        await _context.SaveChangesAsync();
+                    }
                     return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode={vnp_ResponseCode}&amount={bookingAmount}");
                 }
             }
 
+            if (booking != null && booking.Status == "Pending")
+            {
+                booking.Status = "Cancelled";
+                await _context.SaveChangesAsync();
+            }
             return Redirect($"{frontendUrl}/payment?status=failed&bookingId={bookingId}&errorCode=InvalidSignature&amount={bookingAmount}");
         }
     }

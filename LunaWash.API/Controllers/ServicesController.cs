@@ -16,6 +16,9 @@ namespace LunaWash.API.Controllers
             _serviceManagementService = serviceManagementService;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin all services
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAllServices()
         {
@@ -23,6 +26,9 @@ namespace LunaWash.API.Controllers
             return Ok(services);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin service by id
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetServiceById(string id)
         {
@@ -31,6 +37,9 @@ namespace LunaWash.API.Controllers
             return Ok(service);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Tạo mới service
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> CreateService([FromBody] WashServiceCreateDto dto)
         {
@@ -38,6 +47,9 @@ namespace LunaWash.API.Controllers
             return CreatedAtAction(nameof(GetServiceById), new { id = service.Id }, service);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật service
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateService(string id, [FromBody] WashServiceUpdateDto dto)
         {
@@ -46,6 +58,9 @@ namespace LunaWash.API.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa service
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteService(string id)
         {
@@ -54,6 +69,9 @@ namespace LunaWash.API.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Thêm or update service price
+        /// </summary>
         [HttpPost("{id}/prices")]
         public async Task<IActionResult> AddOrUpdateServicePrice(string id, [FromBody] ServicePriceCreateUpdateDto dto)
         {

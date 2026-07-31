@@ -1,0 +1,208 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using LunaWash.BLL.Interfaces;
+using LunaWash.DAL.Data;
+using Microsoft.EntityFrameworkCore;
+
+namespace LunaWash.BLL.Services
+{
+    public class DashboardService : IDashboardService
+    {
+        private readonly ApplicationDbContext _context;
+
+        public DashboardService(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<DashboardOverviewDto> GetOverviewAsync()
+        {
+            var overview = new DashboardOverviewDto();
+
+            // Total Bookings & Revenue
+            var completedBookings = await _context.Bookings
+                .Where(b => b.Status == "Completed" || b.Status == "Paid" || b.Status == "Confirmed")
+                .ToListAsync();
+
+            overview.TotalBookings = completedBookings.Count;
+            overview.TotalRevenue = completedBookings.Sum(b => b.TotalPrice);
+
+            // Customers & Employees
+            var customersCount = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.Role.RoleName == "Customer" && !u.IsDeleted)
+                .CountAsync();
+            overview.TotalCustomers = customersCount;
+
+            var employeesCount = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => (u.Role.RoleName == "Staff" || u.Role.RoleName == "TechnicalStaff") && !u.IsDeleted && u.IsActive)
+                .CountAsync();
+            overview.TotalEmployees = employeesCount;
+
+            // Fetch auxiliary data for branch stats
+            var allSlots = await _context.WashSlots.ToListAsync();
+            var allReviews = await _context.ServiceReviews.ToListAsync();
+            var today = DateTime.UtcNow.Date;
+
+            // Revenue by Branch
+            var branches = await _context.Branches.Where(b => !b.IsDeleted).ToListAsync();
+            foreach (var branch in branches)
+            {
+                var branchBookings = completedBookings
+                    .Where(b => b.BranchId == branch.Id).ToList();
+
+                var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                var referenceDate = localToday;
+                var chartStartDate = referenceDate.AddDays(-6);
+
+                // Doanh thu của ngày hôm nay (DOANH THU NGÀY)
+                var branchRevenue = branchBookings
+                    .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == referenceDate)
+                    .Sum(b => b.TotalPrice);
+
+                // Calculate Stations
+                var branchSlots = allSlots.Where(s => s.BranchId == branch.Id).ToList();
+                int totalSlots = branchSlots.Count;
+                int activeSlots = branchSlots.Count(s => s.Status == "Available" || s.Status == "Active" || s.Status == "Occupied");
+                
+                bool isActive = activeSlots > 0 || totalSlots == 0; 
+                string statusText = isActive ? "ĐANG HOẠT ĐỘNG" : "BẢO TRÌ TRẠM";
+                string activeStationsText = $"{activeSlots}/{Math.Max(1, totalSlots)} trạm";
+
+                // Calculate Rating
+                var branchReviews = allReviews.Where(r => r.BranchId == branch.Id).ToList();
+                double rating = branchReviews.Any() ? Math.Round(branchReviews.Average(r => r.OverallRating), 1) : 5.0;
+
+                // Sparkline (Last 7 days of activity)
+                var sparkline = new List<DailyRevenueDto>();
+                for (int i = 0; i <= 6; i++)
+                {
+                    var date = chartStartDate.AddDays(i);
+                    var dayRevenue = branchBookings
+                        .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == date)
+                        .Sum(b => b.TotalPrice);
+                    
+                    sparkline.Add(new DailyRevenueDto { Value = dayRevenue });
+                }
+
+                overview.RevenueByBranch.Add(new BranchRevenueDto
+                {
+                    BranchId = branch.Id,
+                    BranchName = branch.BranchName,
+                    Revenue = branchRevenue,
+                    Address = branch.Address ?? "Thủ Đức, HCM",
+                    Status = statusText,
+                    IsActive = isActive,
+                    ActiveStations = activeStationsText,
+                    Rating = rating,
+                    SparklineData = sparkline
+                });
+            }
+
+            // Recent Bookings
+            var recent = await _context.Bookings
+                .Include(b => b.Customer)
+                .OrderByDescending(b => b.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            foreach (var b in recent)
+            {
+                overview.RecentBookings.Add(new RecentBookingDto
+                {
+                    Id = b.Id,
+                    CustomerName = b.Customer?.FullName ?? "Unknown",
+                    ServiceName = "Dịch vụ rửa xe", // Mocking service name as it might require joining with BookingServices
+                    Amount = b.TotalPrice,
+                    Status = b.Status,
+                    Date = b.CreatedAt.ToString("dd/MM/yyyy HH:mm")
+                });
+            }
+
+            return overview;
+        }
+
+        public async Task<BranchRevenueOverviewDto> GetBranchRevenueOverviewAsync(string branchId, string period, DateTime? referenceDate)
+        {
+            var overview = new BranchRevenueOverviewDto();
+            var refDate = referenceDate ?? DateTime.UtcNow;
+            
+            var localRefDate = TimeZoneInfo.ConvertTimeFromUtc(refDate, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+            var localToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+
+            var allBookings = await _context.Bookings
+                .Where(b => b.BranchId == branchId && (b.Status == "Completed" || b.Status == "Paid" || b.Status == "Confirmed"))
+                .ToListAsync();
+
+            overview.TodayRevenue = allBookings
+                .Where(b => TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date == localToday.Date)
+                .Sum(b => b.TotalPrice);
+
+            var startOfThisWeek = localToday.Date.AddDays(-(int)localToday.DayOfWeek + (int)DayOfWeek.Monday);
+            if (localToday.DayOfWeek == DayOfWeek.Sunday) startOfThisWeek = startOfThisWeek.AddDays(-7);
+            
+            overview.ThisWeekRevenue = allBookings
+                .Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate >= startOfThisWeek && bDate <= localToday.Date;
+                }).Sum(b => b.TotalPrice);
+
+            overview.ThisMonthRevenue = allBookings
+                .Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate.Month == localToday.Month && bDate.Year == localToday.Year;
+                }).Sum(b => b.TotalPrice);
+
+            var chartStartDate = localRefDate.Date;
+            var chartEndDate = localRefDate.Date;
+            
+            if (period == "month") {
+                chartStartDate = new DateTime(localRefDate.Year, localRefDate.Month, 1);
+                chartEndDate = chartStartDate.AddMonths(1).AddDays(-1);
+                overview.CurrentPeriodLabel = $"Tháng {localRefDate.Month}/{localRefDate.Year}";
+            } else {
+                // week
+                chartStartDate = localRefDate.Date.AddDays(-(int)localRefDate.DayOfWeek + (int)DayOfWeek.Monday);
+                if (localRefDate.DayOfWeek == DayOfWeek.Sunday) chartStartDate = chartStartDate.AddDays(-7);
+                chartEndDate = chartStartDate.AddDays(6);
+                overview.CurrentPeriodLabel = $"Tuần {chartStartDate:dd/MM} - {chartEndDate:dd/MM}";
+            }
+
+            var periodBookings = allBookings.Where(b => {
+                var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                return bDate >= chartStartDate && bDate <= chartEndDate;
+            }).ToList();
+
+            for (var dt = chartStartDate; dt <= chartEndDate; dt = dt.AddDays(1)) {
+                var dayBookings = periodBookings.Where(b => {
+                    var bDate = TimeZoneInfo.ConvertTimeFromUtc(b.CreatedAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time")).Date;
+                    return bDate == dt.Date;
+                }).ToList();
+
+                var revenue = dayBookings.Sum(b => b.TotalPrice);
+                var count = dayBookings.Count;
+
+                overview.ChartData.Add(new RevenueDataPointDto {
+                    Label = period == "month" ? dt.Day.ToString() : (dt.DayOfWeek == DayOfWeek.Sunday ? "CN" : "T" + ((int)dt.DayOfWeek + 1)),
+                    Revenue = revenue,
+                    BookingsCount = count,
+                    FullDate = dt.ToString("yyyy-MM-dd")
+                });
+
+                if (count > 0) {
+                    overview.Details.Add(new RevenueDetailDto {
+                        Date = dt.ToString("dd/MM/yyyy"),
+                        TotalBookings = count,
+                        TotalRevenue = revenue
+                    });
+                }
+            }
+
+            overview.Details = overview.Details.OrderByDescending(d => DateTime.ParseExact(d.Date, "dd/MM/yyyy", null)).ToList();
+            return overview;
+        }
+    }
+}

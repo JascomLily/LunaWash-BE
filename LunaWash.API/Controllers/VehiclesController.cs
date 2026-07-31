@@ -24,6 +24,9 @@ namespace LunaWash.API.Controllers
             return User?.FindFirstValue("sub") ?? User?.FindFirstValue(ClaimTypes.NameIdentifier) ?? string.Empty;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin my vehicles
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetMyVehicles()
         {
@@ -34,6 +37,9 @@ namespace LunaWash.API.Controllers
             return Ok(vehicles);
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Thêm vehicle
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> AddVehicle([FromBody] CreateVehicleRequestDTO dto)
         {
@@ -57,6 +63,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Xóa vehicle
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(string id)
         {

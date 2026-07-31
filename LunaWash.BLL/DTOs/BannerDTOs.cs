@@ -1,22 +1,22 @@
 using System;
+using System.Collections.Generic;
 
-namespace LunaWash.BLL.DTOs
+namespace LunaWash.BLL.DTOs;
+
+public class BannerDto
 {
-    public class BannerCreateUpdateDto
-    {
-        public string Url { get; set; } = null!; // maps to ImageUrl in DB
-        public string? PromoCode { get; set; } // maps to RedirectUrl in DB
-        public int Position { get; set; }
-        public bool IsActive { get; set; }
-    }
+    public int Id { get; set; }
+    public string ImageUrl { get; set; } = string.Empty;
+    public string? VoucherId { get; set; }
+    public VoucherDto? Voucher { get; set; }
+    public string PlatformType { get; set; } = "Web";
+    public bool IsHidden { get; set; } = false;
+}
 
-    public class BannerResponseDto
-    {
-        public string Id { get; set; } = null!;
-        public string Url { get; set; } = null!; // maps to ImageUrl in DB
-        public string? PromoCode { get; set; } // maps to RedirectUrl in DB
-        public int Position { get; set; }
-        public bool IsActive { get; set; }
-        public DateTime CreatedAt { get; set; }
-    }
+public class SaveBannerDto
+{
+    public string ImageUrl { get; set; } = string.Empty;
+    public string? VoucherId { get; set; }
+    public string PlatformType { get; set; } = "Web";
+    public bool IsHidden { get; set; } = false;
 }

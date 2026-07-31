@@ -6,9 +6,9 @@ namespace LunaWash.BLL.Interfaces
 {
     public interface IIncidentService
     {
-        Task<IncidentReportResponseDto?> ReportIncidentAsync(string branchId, string reporterId, IncidentReportCreateDto dto);
-        Task<IEnumerable<IncidentReportResponseDto>> GetIncidentsByBranchAsync(string branchId);
-        Task<bool> ApproveIncidentAsync(string id, string assignedToId, string priority);
-        Task<bool> RejectIncidentAsync(string id);
+        Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string reporterId);
+        Task<IEnumerable<IncidentResponse>> GetIncidentsByBranchAsync(string branchId);
+        Task<IncidentResponse?> GetIncidentByIdAsync(string incidentId);
+        Task<bool> UpdateIncidentStatusAsync(string incidentId, string status);
     }
 }

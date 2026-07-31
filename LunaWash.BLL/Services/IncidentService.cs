@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LunaWash.BLL.DTOs;
-using LunaWash.BLL.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using LunaWash.DAL.Data;
 using LunaWash.DAL.Entities;
-using Microsoft.EntityFrameworkCore;
+using LunaWash.BLL.DTOs;
+using LunaWash.BLL.Interfaces;
 
 namespace LunaWash.BLL.Services
 {
@@ -19,114 +19,114 @@ namespace LunaWash.BLL.Services
             _context = context;
         }
 
-        public async Task<IncidentReportResponseDto?> ReportIncidentAsync(string branchId, string reporterId, IncidentReportCreateDto dto)
+        public async Task<IncidentResponse> CreateIncidentAsync(CreateIncidentRequest request, string reporterId)
         {
-            var eq = await _context.Equipments.FirstOrDefaultAsync(e => e.Id == dto.EquipmentId && e.BranchId == branchId);
-            if (eq == null) return null;
-
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == reporterId);
-            if (user == null) return null;
-
-            var id = "INC-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
             var incident = new IncidentReport
             {
-                Id = id,
-                BranchId = branchId,
-                EquipmentId = dto.EquipmentId,
+                Id = Guid.NewGuid().ToString(),
+                Title = request.Title,
+                EquipmentId = request.EquipmentId,
+                BranchId = request.BranchId,
                 ReporterId = reporterId,
-                Title = dto.Title,
-                Description = dto.Description,
-                Status = "Chờ duyệt",
+                Description = request.Description,
+                ImageUrl = request.ImageUrl,
+                Status = "Chờ xử lý",
                 CreatedAt = DateTime.UtcNow
             };
 
             _context.IncidentReports.Add(incident);
+
+            // Bắn thông báo cho Quản lý của chi nhánh
+            var managers = await _context.Users
+                .Include(u => u.Role)
+                .Where(u => u.BranchId == request.BranchId && (u.Role.RoleName == "BranchManager" || u.Role.RoleName == "Admin"))
+                .ToListAsync();
+
+            foreach (var manager in managers)
+            {
+                _context.Notifications.Add(new LunaWash.DAL.Entities.Notification
+                {
+                    UserId = manager.Id,
+                    Title = "Báo cáo sự cố mới",
+                    Message = $"Sự cố mới: {request.Title}",
+                    Type = "System"
+                });
+            }
+
+            // Cập nhật trạng thái thiết bị thành "Đang hỏng"
+            if (!string.IsNullOrEmpty(request.EquipmentId))
+            {
+                var eq = await _context.Equipments.FindAsync(request.EquipmentId);
+                if (eq != null)
+                {
+                    eq.Status = "Đang hỏng";
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            return new IncidentReportResponseDto
+            return await GetIncidentByIdAsync(incident.Id) ?? throw new Exception("Failed to create incident");
+        }
+
+        public async Task<IEnumerable<IncidentResponse>> GetIncidentsByBranchAsync(string branchId)
+        {
+            return await _context.IncidentReports
+                .Include(i => i.Reporter)
+                .Include(i => i.Equipment)
+                .Include(i => i.Branch)
+                .Where(i => i.BranchId == branchId)
+                .OrderByDescending(i => i.CreatedAt)
+                .Select(i => new IncidentResponse
+                {
+                    Id = i.Id,
+                    Title = i.Title,
+                    EquipmentId = i.EquipmentId,
+                    EquipmentName = i.Equipment != null ? i.Equipment.Name : null,
+                    BranchId = i.BranchId,
+                    BranchName = i.Branch.BranchName,
+                    ReporterId = i.ReporterId,
+                    ReporterName = i.Reporter.FullName,
+                    Description = i.Description,
+                    Status = i.Status,
+                    ImageUrl = i.ImageUrl,
+                    CreatedAt = i.CreatedAt
+                })
+                .ToListAsync();
+        }
+
+        public async Task<IncidentResponse?> GetIncidentByIdAsync(string incidentId)
+        {
+            var incident = await _context.IncidentReports
+                .Include(i => i.Reporter)
+                .Include(i => i.Equipment)
+                .Include(i => i.Branch)
+                .FirstOrDefaultAsync(i => i.Id == incidentId);
+
+            if (incident == null) return null;
+
+            return new IncidentResponse
             {
                 Id = incident.Id,
-                BranchId = incident.BranchId,
-                EquipmentId = incident.EquipmentId,
-                EquipmentName = eq.Name,
-                ReporterId = incident.ReporterId,
-                ReporterName = user.FullName,
                 Title = incident.Title,
+                EquipmentId = incident.EquipmentId,
+                EquipmentName = incident.Equipment?.Name,
+                BranchId = incident.BranchId,
+                BranchName = incident.Branch.BranchName,
+                ReporterId = incident.ReporterId,
+                ReporterName = incident.Reporter.FullName,
                 Description = incident.Description,
                 Status = incident.Status,
+                ImageUrl = incident.ImageUrl,
                 CreatedAt = incident.CreatedAt
             };
         }
 
-        public async Task<IEnumerable<IncidentReportResponseDto>> GetIncidentsByBranchAsync(string branchId)
+        public async Task<bool> UpdateIncidentStatusAsync(string incidentId, string status)
         {
-            var incidents = await _context.IncidentReports
-                .Include(i => i.Equipment)
-                .Include(i => i.Reporter)
-                .Where(i => i.BranchId == branchId)
-                .OrderByDescending(i => i.CreatedAt)
-                .ToListAsync();
+            var incident = await _context.IncidentReports.FindAsync(incidentId);
+            if (incident == null) return false;
 
-            return incidents.Select(i => new IncidentReportResponseDto
-            {
-                Id = i.Id,
-                BranchId = i.BranchId,
-                EquipmentId = i.EquipmentId,
-                EquipmentName = i.Equipment.Name,
-                ReporterId = i.ReporterId,
-                ReporterName = i.Reporter.FullName,
-                Title = i.Title,
-                Description = i.Description,
-                Status = i.Status,
-                CreatedAt = i.CreatedAt,
-                UpdatedAt = i.UpdatedAt
-            });
-        }
-
-        public async Task<bool> ApproveIncidentAsync(string id, string assignedToId, string priority)
-        {
-            var incident = await _context.IncidentReports.Include(i => i.Equipment).FirstOrDefaultAsync(i => i.Id == id);
-            if (incident == null || incident.Status != "Chờ duyệt") return false;
-
-            var tech = await _context.Users.FirstOrDefaultAsync(u => u.Id == assignedToId && u.RoleId == "ROL-05");
-            if (tech == null) return false;
-
-            // 1. Cập nhật trạng thái sự cố
-            incident.Status = "Đã duyệt";
-            incident.UpdatedAt = DateTime.UtcNow;
-
-            // 2. Cập nhật trạng thái thiết bị thành Lỗi
-            incident.Equipment.Status = "Lỗi";
-
-            // 3. Tạo task sửa chữa phân công cho kỹ thuật
-            var taskId = "T-" + Guid.NewGuid().ToString("N").Substring(0, 8).ToUpper();
-            var task = new MaintenanceTask
-            {
-                Id = taskId,
-                BranchId = incident.BranchId,
-                EquipmentId = incident.EquipmentId,
-                TaskName = $"Sự cố: {incident.Title}",
-                Description = incident.Description,
-                Status = "Chưa làm",
-                AssignedToId = assignedToId,
-                IsIncident = true,
-                Priority = priority,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.MaintenanceTasks.Add(task);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> RejectIncidentAsync(string id)
-        {
-            var incident = await _context.IncidentReports.FirstOrDefaultAsync(i => i.Id == id);
-            if (incident == null || incident.Status != "Chờ duyệt") return false;
-
-            incident.Status = "Đã từ chối";
-            incident.UpdatedAt = DateTime.UtcNow;
-
+            incident.Status = status;
             await _context.SaveChangesAsync();
             return true;
         }

@@ -20,6 +20,9 @@ namespace LunaWash.API.Controllers
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Login
+        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestDTO loginDto)
         {
@@ -49,6 +52,9 @@ namespace LunaWash.API.Controllers
             }
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Register
+        /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequestDTO registerDto)
         {
@@ -67,6 +73,9 @@ namespace LunaWash.API.Controllers
             return Ok(new { message = "Registration successful." });
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Google login
+        /// </summary>
         [HttpPost("google-login")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequestDTO request)
         {
@@ -99,6 +108,9 @@ namespace LunaWash.API.Controllers
             public string Otp { get; set; } = null!;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Verify otp
+        /// </summary>
         [HttpPost("verify-otp")]
         public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
         {
@@ -115,6 +127,9 @@ namespace LunaWash.API.Controllers
             public string Email { get; set; } = null!;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Resend otp
+        /// </summary>
         [HttpPost("resend-otp")]
         public async Task<IActionResult> ResendOtp([FromBody] ResendOtpRequest request)
         {
@@ -131,6 +146,9 @@ namespace LunaWash.API.Controllers
             public string Email { get; set; } = null!;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Forgot password
+        /// </summary>
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
         {
@@ -149,6 +167,9 @@ namespace LunaWash.API.Controllers
             public string NewPassword { get; set; } = null!;
         }
 
+        /// <summary>
+        /// API xử lý chức năng: Reset password
+        /// </summary>
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
         {
@@ -161,6 +182,9 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
+        /// <summary>
+        /// API xử lý chức năng: Lấy danh sách / thông tin current user
+        /// </summary>
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
@@ -182,6 +206,9 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
+        /// <summary>
+        /// API xử lý chức năng: Cập nhật profile
+        /// </summary>
         [HttpPut("me")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDTO updateDto)
         {
@@ -207,6 +234,9 @@ namespace LunaWash.API.Controllers
         }
 
         [Authorize]
+        /// <summary>
+        /// API xử lý chức năng: Kiểm tra login
+        /// </summary>
         [HttpGet("check")]
         public IActionResult CheckLogin()
         {

@@ -63,6 +63,7 @@ namespace LunaWash.BLL.Services
 
             // Retrieve Tier for Customer
             string tierName = "Đồng";
+            int maxBookingDays = 3;
             if (user.Role.RoleName == "Customer")
             {
                 var profile = await _context.CustomerProfiles
@@ -72,8 +73,13 @@ namespace LunaWash.BLL.Services
                 if (profile != null && profile.MembershipTier != null)
                 {
                     tierName = profile.MembershipTier.TierName;
+                    maxBookingDays = profile.MembershipTier.MaxBookingDays;
                     if (tierName == "Member") tierName = "Đồng";
                 }
+            }
+            else if (user.Role.RoleName == "Admin" || user.Role.RoleName == "Staff" || user.Role.RoleName == "BranchManager")
+            {
+                maxBookingDays = 365; // Admin/Staff không bị giới hạn
             }
 
             var token = GenerateJwtToken(user);
@@ -85,7 +91,8 @@ namespace LunaWash.BLL.Services
                 Email = user.Email,
                 Role = user.Role.RoleName,
                 Tier = tierName,
-                BranchId = user.BranchId
+                BranchId = user.BranchId,
+                MaxBookingDays = maxBookingDays
             };
         }
 
@@ -146,6 +153,7 @@ namespace LunaWash.BLL.Services
 
                 // Retrieve Tier Name for Response
                 string tierName = "Đồng";
+                int maxBookingDays = 3;
                 if (existingUser.Role?.RoleName == "Customer")
                 {
                     var profile = await _context.CustomerProfiles
@@ -155,6 +163,7 @@ namespace LunaWash.BLL.Services
                     if (profile != null && profile.MembershipTier != null)
                     {
                         tierName = profile.MembershipTier.TierName;
+                        maxBookingDays = profile.MembershipTier.MaxBookingDays;
                         if (tierName == "Member") tierName = "Đồng";
                     }
                 }
@@ -171,7 +180,8 @@ namespace LunaWash.BLL.Services
                     Role = existingUser.Role.RoleName,
                     Tier = tierName,
                     BranchId = existingUser.BranchId,
-                    RequiresProfileUpdate = needsUpdate
+                    RequiresProfileUpdate = needsUpdate,
+                    MaxBookingDays = maxBookingDays
                 };
             }
             catch (Exception ex)
@@ -362,19 +372,16 @@ namespace LunaWash.BLL.Services
                 }
                 // ----------------------------------------------------------------------
 
-                int accPoints = user.CustomerProfile.AccumulatedPoints;
-                string calculatedTier = "ĐỒNG";
-                
-                if (accPoints >= 5000) calculatedTier = "PLATINUM";
-                else if (accPoints >= 3000) calculatedTier = "VÀNG";
-                else if (accPoints >= 1000) calculatedTier = "BẠC";
+                string calculatedTier = user.CustomerProfile.MembershipTier?.TierName ?? "ĐỒNG";
+                if (calculatedTier == "Member") calculatedTier = "ĐỒNG";
 
                 loyaltyInfo = new LoyaltyInfoDTO
                 {
                     CurrentPoints = user.CustomerProfile.CurrentPoints,
-                    AccumulatedPoints = accPoints,
+                    AccumulatedPoints = user.CustomerProfile.AccumulatedPoints,
                     TierName = calculatedTier,
-                    DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0
+                    DiscountPercent = user.CustomerProfile.MembershipTier?.DiscountPercent ?? 0,
+                    MaxBookingDays = user.CustomerProfile.MembershipTier?.MaxBookingDays ?? 3
                 };
             }
 

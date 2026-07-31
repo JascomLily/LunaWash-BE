@@ -9,5 +9,6 @@ namespace LunaWash.BLL.DTOs
         public string Tier { get; set; } = null!;
         public string? BranchId { get; set; }
         public bool RequiresProfileUpdate { get; set; }
+        public int MaxBookingDays { get; set; }
     }
 }

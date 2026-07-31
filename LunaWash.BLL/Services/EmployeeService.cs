@@ -21,6 +21,29 @@ namespace LunaWash.BLL.Services
             _emailService = emailService;
         }
 
+        public async Task<IEnumerable<EmployeeResponseDto>> GetAllEmployeesAsync()
+        {
+            var users = await _context.Users
+                .Include(u => u.Role)
+                .Include(u => u.StaffProfile)
+                .Where(u => !u.IsDeleted && (u.Role.RoleName == "Staff" || u.Role.RoleName == "TechnicalStaff" || u.Role.RoleName == "BranchManager"))
+                .ToListAsync();
+
+            return users.Select(u => new EmployeeResponseDto
+            {
+                Id = u.Id,
+                FullName = u.FullName,
+                Email = u.Email,
+                PhoneNumber = u.PhoneNumber,
+                RoleId = u.RoleId,
+                RoleName = u.Role.RoleName,
+                BranchId = u.BranchId,
+                IsActive = u.IsActive,
+                Salary = u.StaffProfile?.Salary ?? 0,
+                LeaveDays = u.StaffProfile?.LeaveDays ?? 0
+            });
+        }
+
         public async Task<IEnumerable<EmployeeResponseDto>> GetEmployeesByBranchAsync(string branchId)
         {
             var users = await _context.Users
@@ -117,6 +140,26 @@ namespace LunaWash.BLL.Services
             };
         }
 
+        public async Task<bool> UpdateEmployeeSalaryAsync(string id, decimal newSalary)
+        {
+            var profile = await _context.StaffProfiles.FirstOrDefaultAsync(p => p.UserId == id);
+            if (profile == null) return false;
+            
+            profile.Salary = newSalary;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> UpdateEmployeeStatusAsync(string id, bool isActive)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+            if (user == null) return false;
+
+            user.IsActive = isActive;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> DeleteEmployeeAsync(string id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
@@ -194,6 +237,39 @@ namespace LunaWash.BLL.Services
                 CheckInTime = a.CheckInTime,
                 CheckOutTime = a.CheckOutTime,
                 Status = a.Status
+            });
+        }
+
+        public async Task<IEnumerable<AttendanceResponseDto>> GetWeeklyLeavesByBranchAsync(string branchId, string date)
+        {
+            if (!DateTime.TryParse(date, out var parsedDate)) return new List<AttendanceResponseDto>();
+            
+            var targetDate = parsedDate.Date;
+            var diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var startOfWeek = targetDate.AddDays(-1 * diff).Date;
+            var endOfWeek = startOfWeek.AddDays(7); // up to Sunday night
+
+            var leaves = await _context.Attendances
+                .Include(a => a.User)
+                .ThenInclude(u => u.Role)
+                .Where(a => a.BranchId == branchId 
+                    && a.AttendanceDate >= startOfWeek 
+                    && a.AttendanceDate < endOfWeek
+                    && (a.Status == "Absent" || a.Status == "Leave"))
+                .ToListAsync();
+
+            return leaves.Select(a => new AttendanceResponseDto
+            {
+                Id = a.Id,
+                UserId = a.UserId,
+                FullName = a.User.FullName,
+                RoleName = a.User.Role.RoleName,
+                BranchId = a.BranchId,
+                AttendanceDate = a.AttendanceDate,
+                CheckInTime = a.CheckInTime,
+                CheckOutTime = a.CheckOutTime,
+                Status = a.Status,
+                Note = a.Note
             });
         }
     }
