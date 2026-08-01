@@ -326,7 +326,8 @@ namespace LunaWash.BLL.Services
                     VehicleTypeId = vehicle?.VehicleTypeId ?? dto.VehicleTypeId,
                     ScheduledStartTime = startTime,
                     ScheduledEndTime = endTime,
-                    Status = "Pending",
+                    // Tiền mặt → tự động Confirmed, VNPay → giữ Pending cho đến khi thanh toán xong
+                    Status = paymentMethod == "vnpay" ? "Pending" : "Confirmed",
                     WashSlotId = dbSlotId,
                     Notes = JsonSerializer.Serialize(notesObj),
                     CreatedAt = DateTime.UtcNow,
