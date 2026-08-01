@@ -62,10 +62,10 @@ namespace LunaWash.API.Controllers
             if (totalPrice <= 0) return BadRequest("Lỗi: Số tiền thanh toán không hợp lệ.");
 
             var settings = await _settingsService.GetPaymentSettingsAsync();
-            var tmnCode = !string.IsNullOrEmpty(settings?.VnpayTmnCode) ? settings.VnpayTmnCode : _configuration["VnPay:TmnCode"];
-            var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
+            var tmnCode = (!string.IsNullOrEmpty(settings?.VnpayTmnCode) ? settings.VnpayTmnCode : _configuration["VnPay:TmnCode"])?.Trim();
+            var hashSecret = (!string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"])?.Trim();
 
-            string? returnUrl = _configuration["VnPay:ReturnUrl"];
+            string? returnUrl = _configuration["VnPay:ReturnUrl"]?.Trim();
             if (string.IsNullOrEmpty(returnUrl) || (returnUrl.Contains("localhost") && !HttpContext.Request.Host.Host.Contains("localhost")))
             {
                 var request = HttpContext.Request;
@@ -102,7 +102,8 @@ namespace LunaWash.API.Controllers
             vnpay.AddRequestData("vnp_ReturnUrl", returnUrl);
             vnpay.AddRequestData("vnp_TxnRef", bookingId); // Mã tham chiếu (mã đơn hàng)
 
-            var paymentUrl = vnpay.CreateRequestUrl(_configuration["VnPay:BaseUrl"]!, hashSecret!);
+            var baseUrl = _configuration["VnPay:BaseUrl"]?.Trim() ?? "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+            var paymentUrl = vnpay.CreateRequestUrl(baseUrl, hashSecret!);
 
             return Ok(new { url = paymentUrl });
         }
@@ -132,7 +133,7 @@ namespace LunaWash.API.Controllers
 
             string? feUrl = Request.Query["feUrl"];
             var settings = await _settingsService.GetPaymentSettingsAsync();
-            var hashSecret = !string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"];
+            var hashSecret = (!string.IsNullOrEmpty(settings?.VnpayHashSecret) ? settings.VnpayHashSecret : _configuration["VnPay:HashSecret"])?.Trim();
 
             bool checkSignature = vnpay.ValidateSignature(vnp_SecureHash, hashSecret!);
             var frontendUrl = feUrl ?? _configuration["VnPay:FrontendUrl"] ?? _configuration["FRONTEND_URL"] ?? "http://localhost:5173";
