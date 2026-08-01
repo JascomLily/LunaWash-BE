@@ -255,7 +255,7 @@ namespace LunaWash.BLL.Services
                     }
                 }
 
-                int totalPrice = dto.TotalPrice ?? basePrice;
+                int totalPrice = basePrice;
 
                 CustomerVoucher? appliedVoucher = null;
                 if (!string.IsNullOrWhiteSpace(dto.PromoCode))
@@ -267,23 +267,27 @@ namespace LunaWash.BLL.Services
 
                     if (appliedVoucher != null && appliedVoucher.Voucher != null)
                     {
-                        // Nếu FE không gửi TotalPrice, thì BE tự tính
-                        if (!dto.TotalPrice.HasValue)
+                        if (appliedVoucher.Voucher.DiscountValue <= 100)
                         {
-                            if (appliedVoucher.Voucher.DiscountValue <= 100)
-                            {
-                                totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
-                            }
-                            else
-                            {
-                                totalPrice -= (int)appliedVoucher.Voucher.DiscountValue;
-                            }
-                            if (totalPrice < 0) totalPrice = 0;
+                            totalPrice -= (int)(totalPrice * appliedVoucher.Voucher.DiscountValue / 100);
                         }
+                        else
+                        {
+                            totalPrice -= (int)appliedVoucher.Voucher.DiscountValue;
+                        }
+                        if (totalPrice < 0) totalPrice = 0;
 
                         appliedVoucher.IsUsed = true;
                         appliedVoucher.UsedAt = DateTime.UtcNow;
                     }
+                    else
+                    {
+                        totalPrice = dto.TotalPrice ?? basePrice;
+                    }
+                }
+                else 
+                {
+                    totalPrice = dto.TotalPrice ?? basePrice;
                 }
 
                 // Code xử lý slot lấy từ nhánh main
@@ -675,7 +679,7 @@ namespace LunaWash.BLL.Services
                     SlotName = b.WashSlotId != null && b.WashSlotId.Contains("-WS-") ? "Trạm " + int.Parse(b.WashSlotId.Split('-').Last()) : "Trạm 1",
                     TimeRange = $"{b.ScheduledStartTime:HH:mm} - {b.ScheduledEndTime:HH:mm}\n{b.ScheduledStartTime.ToString("dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture)}",
                     TotalPrice = b.TotalPrice.ToString("N0") + "đ",
-                    Status = b.Status == "Cancelled" ? "Đã hủy" : (b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" : "Hoàn thành"),
+                    Status = b.Status == "Cancelled" ? "Đã hủy" : (b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" : (b.Status == "Pending" ? "Pending" : "Hoàn thành")),
                     PaymentMethod = paymentMethod,
                     CustomerName = customerName,
                     BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
@@ -952,6 +956,7 @@ namespace LunaWash.BLL.Services
                          b.Status == "Hủy vì quá hạn chờ" ? "Hủy vì quá hạn chờ" :
                          b.Status == "Completed" ? "Hoàn thành" : 
                          (b.Status == "Washing" || b.Status == "Checked-In") ? "Đang rửa" : 
+                         b.Status == "Pending" ? "Pending" :
                          "Sắp đến",
                 PaymentMethod = paymentMethod,
                 BookingDate = b.BookingDate.ToDateTime(TimeOnly.MinValue),
